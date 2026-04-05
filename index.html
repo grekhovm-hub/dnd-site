@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <title>DND Manager</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<h1>DND Manager</h1>
+
+<div class="tabs">
+  <button onclick="showTab('characters')">Персонажи</button>
+</div>
+
+<div id="characters" class="tab active">
+  <h2>Персонажи</h2>
+
+  <input type="file" id="fileInput">
+
+  <div id="characterList"></div>
+
+  <hr>
+
+  <div id="characterView"></div>
+</div>
+
+<script src="script.js"></script>
+
+</body>
+</html>
