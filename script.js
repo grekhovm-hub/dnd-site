@@ -74,105 +74,99 @@ function showCharacter(index) {
   const view = document.getElementById('characterView');
 
   const stats = char.stats;
-  const saves = char.saves;
-  const skills = char.skills;
   const prof = char.proficiency;
 
-  const hp = char.vitality["hp-max"].value;
+  const maxHP = char.vitality["hp-max"].value;
+  const currentHP = char.currentHP ?? maxHP;
+
   const ac = char.vitality.ac.value;
   const speed = char.vitality.speed.value;
 
-  // --- Характеристики ---
-  let statsHTML = `<h3>Характеристики</h3><ul>`;
+  const conditionsList = ["Poisoned", "Stunned", "Blinded", "Charmed"];
+
+  // --- характеристики ---
+  let statsHTML = `<div class="stat-grid">`;
+
   for (let key in stats) {
     const s = stats[key];
-    statsHTML += `<li>${key.toUpperCase()}: ${s.score} (мод: ${s.modifier >= 0 ? '+' : ''}${s.modifier})</li>`;
+    statsHTML += `
+      <div class="box stat">
+        <b>${key.toUpperCase()}</b><br>
+        ${s.score}<br>
+        (${s.modifier >= 0 ? '+' : ''}${s.modifier})
+      </div>
+    `;
   }
-  statsHTML += `</ul>`;
 
-  // --- Спасброски ---
-  let savesHTML = `<h3>Спасброски</h3><ul>`;
-  for (let key in saves) {
-    const mod = stats[key].modifier + (saves[key].isProf ? prof : 0);
-    savesHTML += `<li>${key.toUpperCase()}: ${mod >= 0 ? '+' : ''}${mod}</li>`;
-  }
-  savesHTML += `</ul>`;
+  statsHTML += `</div>`;
 
-  // --- Навыки ---
-  let skillsHTML = `<h3>Навыки</h3><ul>`;
-  for (let key in skills) {
-    const skill = skills[key];
-    const baseStat = stats[skill.baseStat].modifier;
+  // --- навыки ---
+  let skillsHTML = `<ul>`;
+  for (let key in char.skills) {
+    const skill = char.skills[key];
+    const base = stats[skill.baseStat].modifier;
     const bonus = skill.isProf ? prof : 0;
-    const total = baseStat + bonus;
+    const total = base + bonus;
 
     skillsHTML += `<li>${key}: ${total >= 0 ? '+' : ''}${total}</li>`;
   }
   skillsHTML += `</ul>`;
 
-  // --- Оружие ---
-  let weaponsHTML = `<h3>Оружие</h3><ul>`;
-  char.weaponsList.forEach(w => {
-    weaponsHTML += `<li>${w.name.value} — ${w.dmg.value}</li>`;
+  // --- условия ---
+  let conditionsHTML = '';
+  conditionsList.forEach(c => {
+    const active = char.conditions?.includes(c) ? 'active' : '';
+    conditionsHTML += `
+      <span class="condition ${active}" onclick="toggleCondition(${index}, '${c}')">
+        ${c}
+      </span>
+    `;
   });
-  weaponsHTML += `</ul>`;
 
-  // --- Функция для вытаскивания текста ---
-  function extractText(block) {
-    if (!block?.value?.data?.content) return '';
-    let result = '';
-
-    block.value.data.content.forEach(p => {
-      if (p.content) {
-        p.content.forEach(t => {
-          if (t.text) result += t.text;
-        });
-      }
-      result += '<br>';
-    });
-
-    return result;
-  }
-
-  const traits = extractText(char.text.traits);
-  const profs = extractText(char.text.prof);
-  const equipment = extractText(char.text.equipment);
-  const attacks = extractText(char.text.attacks);
-  const feats = extractText(char.text.feats);
-
-  // --- Итог ---
+  // --- итог ---
   view.innerHTML = `
-    <h2>${char.name.value}</h2>
+    <div class="character-sheet">
 
-    <p><b>${char.info.charClass.value} ${char.info.level.value}</b></p>
-    <p>${char.info.race.value}</p>
+      <div class="header">
+        <h2>${char.name.value}</h2>
+        <div>
+          ${char.info.charClass.value} ${char.info.level.value}
+        </div>
+      </div>
 
-    <h3>Бой</h3>
-    <p>HP: ${hp}</p>
-    <p>AC: ${ac}</p>
-    <p>Speed: ${speed}</p>
+      <div class="stats-bar">
+        <div class="box">
+          HP<br>
+          <input class="hp-input"
+            value="${currentHP}"
+            onchange="updateHP(${index}, this.value)"> / ${maxHP}
+        </div>
 
-    ${statsHTML}
-    ${savesHTML}
-    ${skillsHTML}
-    ${weaponsHTML}
+        <div class="box">
+          AC<br>${ac}
+        </div>
 
-    <h3>Черты и способности</h3>
-    <p>${traits}</p>
+        <div class="box">
+          Speed<br>${speed}
+        </div>
+      </div>
 
-    <h3>Владения</h3>
-    <p>${profs}</p>
+      ${statsHTML}
 
-    <h3>Снаряжение</h3>
-    <p>${equipment}</p>
+      <div class="section box">
+        <h3>Навыки</h3>
+        ${skillsHTML}
+      </div>
 
-    <h3>Особенности</h3>
-    <p>${attacks}</p>
+      <div class="section box">
+        <h3>Состояния</h3>
+        ${conditionsHTML}
+      </div>
 
-    <h3>Фиты</h3>
-    <p>${feats}</p>
+    </div>
   `;
 }
+
 function saveCharacters() {
   localStorage.setItem('characters', JSON.stringify(characters));
 }
@@ -184,6 +178,28 @@ function loadCharacters() {
     characters = JSON.parse(data);
     renderCharacterList();
   }
+}
+
+function updateHP(index, value) {
+  characters[index].currentHP = value;
+  saveCharacters();
+}
+
+function toggleCondition(index, condition) {
+  if (!characters[index].conditions) {
+    characters[index].conditions = [];
+  }
+
+  const i = characters[index].conditions.indexOf(condition);
+
+  if (i === -1) {
+    characters[index].conditions.push(condition);
+  } else {
+    characters[index].conditions.splice(i, 1);
+  }
+
+  saveCharacters();
+  showCharacter(index);
 }
 
 function showTab(tabId) {
