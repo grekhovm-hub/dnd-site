@@ -319,3 +319,72 @@ function showCharacter(index) {
 
 // =====================
 loadCharacters();
+
+// =====================
+// БОЙ
+// =====================
+let combat = [];
+
+function saveCombat() {
+  localStorage.setItem('combat', JSON.stringify(combat));
+}
+
+function loadCombat() {
+  const data = localStorage.getItem('combat');
+  if (data) {
+    combat = JSON.parse(data);
+    renderCombat();
+  }
+}
+
+function addCombatRow() {
+  combat.push({
+    name: "",
+    initiative: 0,
+    hp: "",
+    ac: ""
+  });
+
+  saveCombat();
+  renderCombat();
+}
+
+function deleteCombatRow(index) {
+  combat.splice(index, 1);
+  saveCombat();
+  renderCombat();
+}
+
+function updateCombatField(index, field, value) {
+  combat[index][field] = field === "initiative" ? Number(value) : value;
+
+  sortCombat();
+  saveCombat();
+  renderCombat();
+}
+
+function sortCombat() {
+  combat.sort((a, b) => b.initiative - a.initiative);
+}
+
+function renderCombat() {
+  const tbody = document.querySelector("#combatTable tbody");
+  tbody.innerHTML = '';
+
+  combat.forEach((row, index) => {
+    const tr = document.createElement("tr");
+
+    tr.innerHTML = `
+      <td><input value="${row.name}" onchange="updateCombatField(${index}, 'name', this.value)"></td>
+      <td><input type="number" value="${row.initiative}" onchange="updateCombatField(${index}, 'initiative', this.value)"></td>
+      <td><input value="${row.hp}" onchange="updateCombatField(${index}, 'hp', this.value)"></td>
+      <td><input value="${row.ac}" onchange="updateCombatField(${index}, 'ac', this.value)"></td>
+      <td><span class="delete-btn" onclick="deleteCombatRow(${index})">❌</span></td>
+    `;
+
+    tbody.appendChild(tr);
+  });
+}
+
+// =====================
+loadCombat();
