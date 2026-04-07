@@ -11,6 +11,7 @@
 
 <div class="tabs">
   <button onclick="showTab('characters')">Персонажи</button>
+  <button onclick="showTab('combat')">Бой</button>
 </div>
 
 <div id="characters" class="tab active">
@@ -25,6 +26,25 @@
   <div id="characterView"></div>
 </div>
 
+<div id="combat" class="tab">
+  <h2>Бой</h2>
+
+  <button onclick="addCombatRow()">+ Добавить</button>
+
+  <table id="combatTable">
+    <thead>
+      <tr>
+        <th>Имя</th>
+        <th>Инициатива</th>
+        <th>Хиты</th>
+        <th>КЗ</th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody></tbody>
+  </table>
+</div>
+  
 <script src="script.js"></script>
 
 </body>
