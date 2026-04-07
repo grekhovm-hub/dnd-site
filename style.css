@@ -4,6 +4,31 @@ body {
   color: #eee;
 }
 
+#combatTable {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 10px;
+}
+
+#combatTable th, #combatTable td {
+  border: 1px solid #555;
+  padding: 5px;
+  text-align: center;
+}
+
+#combatTable input {
+  width: 90%;
+  background: #111;
+  color: white;
+  border: none;
+  text-align: center;
+}
+
+.delete-btn {
+  cursor: pointer;
+  color: red;
+}
+
 .character-sheet {
   max-width: 900px;
   margin: auto;
