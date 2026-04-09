@@ -7,13 +7,83 @@ function showTab(id) {
 }
 
 // =====================
-// ПЕРСОНАЖИ (минимум для работы)
+// ПЕРСОНАЖИ
 // =====================
 let characters = [];
 
+function saveCharacters() {
+  localStorage.setItem('characters', JSON.stringify(characters));
+}
+
 function loadCharacters() {
   const data = localStorage.getItem('characters');
-  if (data) characters = JSON.parse(data);
+  if (data) {
+    characters = JSON.parse(data);
+    renderCharacterList();
+  }
+}
+
+document.getElementById('fileInput').addEventListener('change', function(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+
+  const reader = new FileReader();
+
+  reader.onload = function(ev) {
+    const outer = JSON.parse(ev.target.result);
+    const data = JSON.parse(outer.data);
+
+    characters.push(data);
+    saveCharacters();
+    renderCharacterList();
+  };
+
+  reader.readAsText(file);
+});
+
+function renderCharacterList() {
+  const list = document.getElementById('characterList');
+  list.innerHTML = '';
+
+  characters.forEach((char, index) => {
+    const div = document.createElement('div');
+    div.className = 'character-card';
+
+    div.innerHTML = `
+      <b>${char.name.value}</b>
+      <button onclick="deleteCharacter(${index}); event.stopPropagation()">❌</button>
+    `;
+
+    div.onclick = () => showCharacter(index);
+    list.appendChild(div);
+  });
+}
+
+function deleteCharacter(index) {
+  characters.splice(index, 1);
+  saveCharacters();
+  renderCharacterList();
+}
+
+function updateHP(index, value) {
+  characters[index].currentHP = value;
+  saveCharacters();
+}
+
+function showCharacter(index) {
+  const char = characters[index];
+  const view = document.getElementById('characterView');
+
+  const hp = char.currentHP ?? char.vitality["hp-max"].value;
+
+  view.innerHTML = `
+    <h2>${char.name.value}</h2>
+    <p>${char.info.charClass.value}</p>
+    <p>Хиты: 
+      <input value="${hp}" onchange="updateHP(${index}, this.value)">
+    </p>
+    <p>КЗ: ${char.vitality.ac.value}</p>
+  `;
 }
 
 // =====================
@@ -21,7 +91,6 @@ function loadCharacters() {
 // =====================
 let combat = [];
 
-// 🎨 цвета
 const colors = [
   "#1f2937","#374151","#4b5563","#1e3a8a","#1e40af",
   "#064e3b","#065f46","#78350f","#92400e","#7f1d1d",
@@ -41,7 +110,6 @@ function loadCombat() {
   }
 }
 
-// ➕ добавить
 function addCombatRow() {
   combat.push({
     name: "",
@@ -55,43 +123,35 @@ function addCombatRow() {
   renderCombat();
 }
 
-// ❌ удалить
 function deleteCombatRow(index) {
   combat.splice(index, 1);
   saveCombat();
   renderCombat();
 }
 
-// 📄 дублировать
 function duplicateCombatRow(index) {
   combat.push({ ...combat[index] });
-
   saveCombat();
   renderCombat();
 }
 
-// ✏️ обновление
 function updateCombatField(index, field, value) {
   combat[index][field] = field === "initiative" ? Number(value) : value;
-
   sortCombat();
   saveCombat();
   renderCombat();
 }
 
-// 🎨 цвет
 function updateColor(index, value) {
   combat[index].color = value;
   saveCombat();
   renderCombat();
 }
 
-// 🔽 сортировка
 function sortCombat() {
   combat.sort((a, b) => b.initiative - a.initiative);
 }
 
-// 👇 выбор персонажа
 function selectCharacter(index, charIndex) {
   if (charIndex === "") return;
 
@@ -105,7 +165,6 @@ function selectCharacter(index, charIndex) {
   renderCombat();
 }
 
-// список персонажей
 function getCharacterSelect(index, currentName) {
   let html = `<select onchange="selectCharacter(${index}, this.value)">`;
   html += `<option value="">${currentName || "Выбрать"}</option>`;
@@ -118,11 +177,9 @@ function getCharacterSelect(index, currentName) {
   return html;
 }
 
-// 🎨 цветной select (ВАЖНО)
 function getColorSelect(index, currentColor) {
-  let html = `<select class="color-select"
-      style="background:${currentColor}"
-      onchange="updateColor(${index}, this.value)">`;
+  let html = `<select class="color-select" style="background:${currentColor}"
+    onchange="updateColor(${index}, this.value)">`;
 
   colors.forEach(c => {
     html += `<option value="${c}"></option>`;
@@ -132,7 +189,6 @@ function getColorSelect(index, currentColor) {
   return html;
 }
 
-// 🎨 рендер
 function renderCombat() {
   const tbody = document.querySelector("#combatTable tbody");
   tbody.innerHTML = '';
