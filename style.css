@@ -86,3 +86,9 @@ input.hp-input {
 .condition.active {
   background: red;
 }
+
+select {
+  width: 100%;
+  background: #222;
+  color: white;
+}
