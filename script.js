@@ -337,6 +337,7 @@ function loadCombat() {
   }
 }
 
+// ➕ добавить строку
 function addCombatRow() {
   combat.push({
     name: "",
@@ -349,12 +350,24 @@ function addCombatRow() {
   renderCombat();
 }
 
+// ❌ удалить
 function deleteCombatRow(index) {
   combat.splice(index, 1);
   saveCombat();
   renderCombat();
 }
 
+// 📄 дублировать
+function duplicateCombatRow(index) {
+  const copy = { ...combat[index] };
+  combat.push(copy);
+
+  sortCombat();
+  saveCombat();
+  renderCombat();
+}
+
+// ✏️ обновление поля
 function updateCombatField(index, field, value) {
   combat[index][field] = field === "initiative" ? Number(value) : value;
 
@@ -363,10 +376,40 @@ function updateCombatField(index, field, value) {
   renderCombat();
 }
 
+// 🔽 сортировка
 function sortCombat() {
   combat.sort((a, b) => b.initiative - a.initiative);
 }
 
+// 👇 выбор персонажа
+function selectCharacter(index, charIndex) {
+  const char = characters[charIndex];
+
+  combat[index].name = char.name.value;
+  combat[index].hp = char.currentHP ?? char.vitality["hp-max"].value;
+  combat[index].ac = char.vitality.ac.value;
+
+  saveCombat();
+  renderCombat();
+}
+
+// 🧾 генерация списка персонажей
+function getCharacterOptions(index) {
+  if (characters.length === 0) return '';
+
+  let options = `<select onchange="selectCharacter(${index}, this.value)">`;
+  options += `<option value="">-- выбрать --</option>`;
+
+  characters.forEach((char, i) => {
+    options += `<option value="${i}">${char.name.value}</option>`;
+  });
+
+  options += `</select>`;
+
+  return options;
+}
+
+// 🎨 рендер
 function renderCombat() {
   const tbody = document.querySelector("#combatTable tbody");
   tbody.innerHTML = '';
@@ -375,16 +418,42 @@ function renderCombat() {
     const tr = document.createElement("tr");
 
     tr.innerHTML = `
-      <td><input value="${row.name}" onchange="updateCombatField(${index}, 'name', this.value)"></td>
-      <td><input type="number" value="${row.initiative}" onchange="updateCombatField(${index}, 'initiative', this.value)"></td>
-      <td><input value="${row.hp}" onchange="updateCombatField(${index}, 'hp', this.value)"></td>
-      <td><input value="${row.ac}" onchange="updateCombatField(${index}, 'ac', this.value)"></td>
-      <td><span class="delete-btn" onclick="deleteCombatRow(${index})">❌</span></td>
+      <td>
+        <input value="${row.name}"
+          onclick="this.nextElementSibling.style.display='block'"
+          onchange="updateCombatField(${index}, 'name', this.value)">
+        <div style="display:none;">
+          ${getCharacterOptions(index)}
+        </div>
+      </td>
+
+      <td>
+        <input type="number" value="${row.initiative}"
+          onchange="updateCombatField(${index}, 'initiative', this.value)">
+      </td>
+
+      <td>
+        <input value="${row.hp}"
+          onchange="updateCombatField(${index}, 'hp', this.value)">
+      </td>
+
+      <td>
+        <input value="${row.ac}"
+          onchange="updateCombatField(${index}, 'ac', this.value)">
+      </td>
+
+      <td>
+        <span onclick="duplicateCombatRow(${index})">📄</span>
+        <span class="delete-btn" onclick="deleteCombatRow(${index})">❌</span>
+      </td>
     `;
 
     tbody.appendChild(tr);
   });
 }
+
+// =====================
+loadCombat();
 
 // =====================
 loadCombat();
