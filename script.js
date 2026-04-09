@@ -23,6 +23,7 @@ function loadCharacters() {
   }
 }
 
+// загрузка JSON
 document.getElementById('fileInput').addEventListener('change', function(e) {
   const file = e.target.files[0];
   if (!file) return;
@@ -30,17 +31,34 @@ document.getElementById('fileInput').addEventListener('change', function(e) {
   const reader = new FileReader();
 
   reader.onload = function(ev) {
-    const outer = JSON.parse(ev.target.result);
-    const data = JSON.parse(outer.data);
+    try {
+      const outer = JSON.parse(ev.target.result);
+      const data = JSON.parse(outer.data);
 
-    characters.push(data);
-    saveCharacters();
-    renderCharacterList();
+      // обновление или добавление
+      const existingIndex = characters.findIndex(c => c.name.value === data.name.value);
+
+      if (existingIndex !== -1) {
+        characters[existingIndex] = data;
+      } else {
+        characters.push(data);
+      }
+
+      saveCharacters();
+      renderCharacterList();
+
+      // фикс бага input
+      e.target.value = "";
+
+    } catch {
+      alert("Ошибка JSON");
+    }
   };
 
   reader.readAsText(file);
 });
 
+// список
 function renderCharacterList() {
   const list = document.getElementById('characterList');
   list.innerHTML = '';
@@ -63,6 +81,7 @@ function deleteCharacter(index) {
   characters.splice(index, 1);
   saveCharacters();
   renderCharacterList();
+  document.getElementById('characterView').innerHTML = '';
 }
 
 function updateHP(index, value) {
@@ -70,19 +89,23 @@ function updateHP(index, value) {
   saveCharacters();
 }
 
+// просмотр
 function showCharacter(index) {
   const char = characters[index];
   const view = document.getElementById('characterView');
 
   const hp = char.currentHP ?? char.vitality["hp-max"].value;
+  const ac = char.vitality.ac.value;
 
   view.innerHTML = `
     <h2>${char.name.value}</h2>
-    <p>${char.info.charClass.value}</p>
-    <p>Хиты: 
+    <p>${char.info.charClass.value} ${char.info.level.value}</p>
+
+    <p>Хиты:
       <input value="${hp}" onchange="updateHP(${index}, this.value)">
     </p>
-    <p>КЗ: ${char.vitality.ac.value}</p>
+
+    <p>КЗ: ${ac}</p>
   `;
 }
 
@@ -91,6 +114,7 @@ function showCharacter(index) {
 // =====================
 let combat = [];
 
+// цвета
 const colors = [
   "#1f2937","#374151","#4b5563","#1e3a8a","#1e40af",
   "#064e3b","#065f46","#78350f","#92400e","#7f1d1d",
@@ -142,16 +166,11 @@ function updateCombatField(index, field, value) {
   renderCombat();
 }
 
-function updateColor(index, value) {
-  combat[index].color = value;
-  saveCombat();
-  renderCombat();
-}
-
 function sortCombat() {
   combat.sort((a, b) => b.initiative - a.initiative);
 }
 
+// выбор персонажа
 function selectCharacter(index, charIndex) {
   if (charIndex === "") return;
 
@@ -165,6 +184,7 @@ function selectCharacter(index, charIndex) {
   renderCombat();
 }
 
+// список персонажей
 function getCharacterSelect(index, currentName) {
   let html = `<select onchange="selectCharacter(${index}, this.value)">`;
   html += `<option value="">${currentName || "Выбрать"}</option>`;
@@ -177,18 +197,30 @@ function getCharacterSelect(index, currentName) {
   return html;
 }
 
-function getColorSelect(index, currentColor) {
-  let html = `<select class="color-select" style="background:${currentColor}"
-    onchange="updateColor(${index}, this.value)">`;
+// 🎨 КАСТОМНЫЙ ВЫБОР ЦВЕТА (ВАЖНО)
+function getColorPicker(index, currentColor) {
+  let html = `<div class="color-picker">`;
 
   colors.forEach(c => {
-    html += `<option value="${c}"></option>`;
+    html += `
+      <div class="color-box"
+        style="background:${c}; ${c === currentColor ? 'outline:2px solid white;' : ''}"
+        onclick="updateColor(${index}, '${c}')">
+      </div>
+    `;
   });
 
-  html += `</select>`;
+  html += `</div>`;
   return html;
 }
 
+function updateColor(index, color) {
+  combat[index].color = color;
+  saveCombat();
+  renderCombat();
+}
+
+// рендер
 function renderCombat() {
   const tbody = document.querySelector("#combatTable tbody");
   tbody.innerHTML = '';
@@ -198,7 +230,7 @@ function renderCombat() {
     tr.style.backgroundColor = row.color;
 
     tr.innerHTML = `
-      <td>${getColorSelect(index, row.color)}</td>
+      <td>${getColorPicker(index, row.color)}</td>
 
       <td>${getCharacterSelect(index, row.name)}</td>
 
@@ -218,7 +250,7 @@ function renderCombat() {
       </td>
 
       <td>
-        <span class="copy-btn" onclick="duplicateCombatRow(${index})">📄</span>
+        <span onclick="duplicateCombatRow(${index})">📄</span>
         <span class="delete-btn" onclick="deleteCombatRow(${index})">❌</span>
       </td>
     `;
