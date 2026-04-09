@@ -9,24 +9,21 @@
 
 <h1>DND Manager</h1>
 
-<div class="tabs">
-  <button onclick="showTab('characters')">Персонажи</button>
-  <button onclick="showTab('combat')">Бой</button>
-</div>
+<button onclick="showTab('characters')">Персонажи</button>
+<button onclick="showTab('combat')">Бой</button>
 
-<div id="characters" class="tab active">
+<!-- ПЕРСОНАЖИ -->
+<div id="characters" class="tab">
   <h2>Персонажи</h2>
 
   <input type="file" id="fileInput">
 
   <div id="characterList"></div>
-
-  <hr>
-
   <div id="characterView"></div>
 </div>
 
-<div id="combat" class="tab">
+<!-- БОЙ -->
+<div id="combat" class="tab" style="display:none;">
   <h2>Бой</h2>
 
   <button onclick="addCombatRow()">+ Добавить</button>
@@ -45,8 +42,7 @@
     <tbody></tbody>
   </table>
 </div>
-  
-<script src="script.js"></script>
 
+<script src="script.js"></script>
 </body>
 </html>
