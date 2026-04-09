@@ -37,6 +37,18 @@ select {
   border: none;
 }
 
+.color-picker {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 2px;
+}
+
+.color-box {
+  width: 15px;
+  height: 15px;
+  cursor: pointer;
+}
+
 /* цвет */
 .color-select {
   width: 40px;
@@ -53,18 +65,6 @@ select {
 .copy-btn {
   cursor: pointer;
   margin-right: 5px;
-}
-
-.color-picker {
-  display: grid;
-  grid-template-columns: repeat(5, 1fr);
-  gap: 2px;
-}
-
-.color-box {
-  width: 15px;
-  height: 15px;
-  cursor: pointer;
 }
 
 /* карточки персонажей */
