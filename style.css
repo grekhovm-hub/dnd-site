@@ -4,12 +4,11 @@ body {
   color: #eee;
 }
 
-/* вкладки */
-.tab {
-  margin-top: 20px;
+.tabs button {
+  margin-right: 10px;
 }
 
-/* таблица боя */
+/* таблица */
 #combatTable {
   width: 100%;
   border-collapse: collapse;
@@ -22,7 +21,6 @@ body {
   text-align: center;
 }
 
-/* инпуты */
 #combatTable input {
   width: 90%;
   background: #111;
@@ -39,6 +37,13 @@ select {
   border: none;
 }
 
+/* цвет */
+.color-select {
+  width: 40px;
+  height: 30px;
+  cursor: pointer;
+}
+
 /* кнопки */
 .delete-btn {
   cursor: pointer;
@@ -50,10 +55,10 @@ select {
   margin-right: 5px;
 }
 
-/* КЛЮЧЕВОЕ: цветной селект */
-.color-select {
-  width: 40px;
-  height: 30px;
-  border: none;
+/* карточки персонажей */
+.character-card {
+  border: 1px solid #555;
+  padding: 5px;
+  margin: 5px 0;
   cursor: pointer;
 }
