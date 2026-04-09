@@ -92,3 +92,17 @@ select {
   background: #222;
   color: white;
 }
+
+.color-select {
+  width: 100%;
+  background: #222;
+  color: white;
+  border: none;
+}
+
+select {
+  background: #222;
+  color: white;
+  border: none;
+  width: 100%;
+}
