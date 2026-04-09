@@ -55,6 +55,18 @@ select {
   margin-right: 5px;
 }
 
+.color-picker {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 2px;
+}
+
+.color-box {
+  width: 15px;
+  height: 15px;
+  cursor: pointer;
+}
+
 /* карточки персонажей */
 .character-card {
   border: 1px solid #555;
