@@ -325,6 +325,14 @@ loadCharacters();
 // =====================
 let combat = [];
 
+// 🎨 20 тёмных цветов
+const colors = [
+  "#1f2937", "#374151", "#4b5563", "#1e3a8a", "#1e40af",
+  "#064e3b", "#065f46", "#78350f", "#92400e", "#7f1d1d",
+  "#991b1b", "#581c87", "#6b21a8", "#0f172a", "#111827",
+  "#3f6212", "#365314", "#134e4a", "#164e63", "#312e81"
+];
+
 function saveCombat() {
   localStorage.setItem('combat', JSON.stringify(combat));
 }
@@ -343,7 +351,8 @@ function addCombatRow() {
     name: "",
     initiative: 0,
     hp: "",
-    ac: ""
+    ac: "",
+    color: colors[0]
   });
 
   saveCombat();
@@ -376,6 +385,13 @@ function updateCombatField(index, field, value) {
   renderCombat();
 }
 
+// 🎨 смена цвета
+function updateColor(index, value) {
+  combat[index].color = value;
+  saveCombat();
+  renderCombat();
+}
+
 // 🔽 сортировка
 function sortCombat() {
   combat.sort((a, b) => b.initiative - a.initiative);
@@ -383,6 +399,8 @@ function sortCombat() {
 
 // 👇 выбор персонажа
 function selectCharacter(index, charIndex) {
+  if (charIndex === "") return;
+
   const char = characters[charIndex];
 
   combat[index].name = char.name.value;
@@ -393,20 +411,29 @@ function selectCharacter(index, charIndex) {
   renderCombat();
 }
 
-// 🧾 генерация списка персонажей
-function getCharacterOptions(index) {
-  if (characters.length === 0) return '';
-
-  let options = `<select onchange="selectCharacter(${index}, this.value)">`;
-  options += `<option value="">-- выбрать --</option>`;
+// 🧾 список персонажей
+function getCharacterSelect(index, currentName) {
+  let html = `<select onchange="selectCharacter(${index}, this.value)">`;
+  html += `<option value="">${currentName || "Выбрать"}</option>`;
 
   characters.forEach((char, i) => {
-    options += `<option value="${i}">${char.name.value}</option>`;
+    html += `<option value="${i}">${char.name.value}</option>`;
   });
 
-  options += `</select>`;
+  html += `</select>`;
+  return html;
+}
 
-  return options;
+// 🎨 список цветов
+function getColorSelect(index, currentColor) {
+  let html = `<select class="color-select" onchange="updateColor(${index}, this.value)">`;
+
+  colors.forEach(c => {
+    html += `<option value="${c}" ${c === currentColor ? "selected" : ""}>⬛</option>`;
+  });
+
+  html += `</select>`;
+  return html;
 }
 
 // 🎨 рендер
@@ -416,16 +443,12 @@ function renderCombat() {
 
   combat.forEach((row, index) => {
     const tr = document.createElement("tr");
+    tr.style.backgroundColor = row.color;
 
     tr.innerHTML = `
-      <td>
-        <input value="${row.name}"
-          onclick="this.nextElementSibling.style.display='block'"
-          onchange="updateCombatField(${index}, 'name', this.value)">
-        <div style="display:none;">
-          ${getCharacterOptions(index)}
-        </div>
-      </td>
+      <td>${getColorSelect(index, row.color)}</td>
+
+      <td>${getCharacterSelect(index, row.name)}</td>
 
       <td>
         <input type="number" value="${row.initiative}"
@@ -451,9 +474,6 @@ function renderCombat() {
     tbody.appendChild(tr);
   });
 }
-
-// =====================
-loadCombat();
 
 // =====================
 loadCombat();
