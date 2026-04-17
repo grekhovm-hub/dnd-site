@@ -232,7 +232,20 @@ function renderCombat() {
     tr.innerHTML = `
       <td>${getColorPicker(index, row.color)}</td>
 
-      <td>${getCharacterSelect(index, row.name)}</td>
+      <td>
+        <input 
+          value="${row.name}" 
+          placeholder="Имя"
+          onchange="updateCombatField(${index}, 'name', this.value)"
+        >
+
+        <select onchange="selectCharacter(${index}, this.value)">
+          <option value="">Выбрать</option>
+          ${characters.map((char, i) => `
+            <option value="${i}">${char.name.value}</option>
+          `).join('')}
+        </select>
+      </td>
 
       <td>
         <input type="number" value="${row.initiative}"
@@ -258,7 +271,6 @@ function renderCombat() {
     tbody.appendChild(tr);
   });
 }
-
 // =====================
 loadCharacters();
 loadCombat();
