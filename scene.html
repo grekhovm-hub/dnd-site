@@ -9,10 +9,13 @@
 </head>
 <body>
 
-<script type="module">
+<!-- THREE -->
+<script src="https://unpkg.com/three@0.148.0/build/three.min.js"></script>
 
-import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.158.0/build/three.module.js';
-import { OrbitControls } from 'https://cdn.jsdelivr.net/npm/three@0.158.0/examples/jsm/controls/OrbitControls.js';
+<!-- OrbitControls (совместимая версия) -->
+<script src="https://unpkg.com/three@0.148.0/examples/js/controls/OrbitControls.js"></script>
+
+<script>
 
 // СЦЕНА
 const scene = new THREE.Scene();
@@ -28,7 +31,7 @@ renderer.setSize(window.innerWidth, window.innerHeight);
 document.body.appendChild(renderer.domElement);
 
 // КОНТРОЛЫ
-const controls = new OrbitControls(camera, renderer.domElement);
+const controls = new THREE.OrbitControls(camera, renderer.domElement);
 controls.target.set(0,0,0);
 controls.update();
 
@@ -69,7 +72,7 @@ for (let x = 0; x < size; x++) {
     cell.position.z = (z - size/2) + 0.5;
     cell.position.y = 0.51;
 
-    // форма корабля (овал)
+    // овальная форма корабля
     const dx = cell.position.x / 5;
     const dz = cell.position.z / 10;
 
