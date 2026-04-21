@@ -141,6 +141,7 @@ for(let x=0;x<size;x++){
 // ФИШКИ
 // =====================
 const tokens = [];
+const tokenMeshes = [];
 let selected = null;
 
   function snapToGrid(x, z) {
@@ -175,6 +176,7 @@ function createToken(x,z){
   head.position.y = 0.8;
 
   group.add(base, body, head);
+  tokenMeshes.push(base, body, head);
 
   group.position.set(x,0.6,z);
 
@@ -197,20 +199,22 @@ document.getElementById("addToken").onclick = () => {
 const raycaster = new THREE.Raycaster();
 const mouse = new THREE.Vector2();
 
-window.addEventListener("mousedown", (e)=>{
+window.addEventListener("mouseup", (e)=>{
 
   mouse.x = (e.clientX/window.innerWidth)*2-1;
   mouse.y = -(e.clientY/window.innerHeight)*2+1;
 
   raycaster.setFromCamera(mouse, camera);
 
-  // 1. Проверяем клик по фишке
-  const tokenHits = raycaster.intersectObjects(tokens, true);
+  // 1. Клик по фишке
+  const tokenHits = raycaster.intersectObjects(tokenMeshes);
 
   if(tokenHits.length > 0){
 
     let obj = tokenHits[0].object;
-    while (obj.parent && !tokens.includes(obj)) {
+
+    // поднимаемся до группы
+    while(obj.parent && !tokens.includes(obj)){
       obj = obj.parent;
     }
 
@@ -218,7 +222,7 @@ window.addEventListener("mousedown", (e)=>{
     return;
   }
 
-  // 2. Если фишка выбрана — ставим на клетку
+  // 2. Если фишка выбрана — ставим
   if(selected){
 
     const gridHits = raycaster.intersectObjects(gridCells);
@@ -231,7 +235,7 @@ window.addEventListener("mousedown", (e)=>{
       selected.position.x = snapped.x;
       selected.position.z = snapped.z;
 
-      selected = null; // отпускаем
+      selected = null;
     }
   }
 
