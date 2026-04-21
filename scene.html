@@ -204,40 +204,40 @@ window.addEventListener("mousedown", (e)=>{
 
   raycaster.setFromCamera(mouse, camera);
 
-  const hits = raycaster.intersectObjects(tokens, true);
+  // 1. Проверяем клик по фишке
+  const tokenHits = raycaster.intersectObjects(tokens, true);
 
-  if(hits.length>0){
-    let obj = hits[0].object;
-while (obj.parent && !tokens.includes(obj)) {
-  obj = obj.parent;
-}
-selected = obj;
+  if(tokenHits.length > 0){
+
+    let obj = tokenHits[0].object;
+    while (obj.parent && !tokens.includes(obj)) {
+      obj = obj.parent;
+    }
+
+    selected = obj;
+    return;
   }
+
+  // 2. Если фишка выбрана — ставим на клетку
+  if(selected){
+
+    const gridHits = raycaster.intersectObjects(gridCells);
+
+    if(gridHits.length > 0){
+
+      const pos = gridHits[0].object.position;
+      const snapped = snapToGrid(pos.x, pos.z);
+
+      selected.position.x = snapped.x;
+      selected.position.z = snapped.z;
+
+      selected = null; // отпускаем
+    }
+  }
+
 });
 
 window.addEventListener("mouseup", ()=> selected=null);
-
-window.addEventListener("mousemove", (e)=>{
-
-  if(!selected) return;
-
-  mouse.x = (e.clientX/window.innerWidth)*2-1;
-  mouse.y = -(e.clientY/window.innerHeight)*2+1;
-
-  raycaster.setFromCamera(mouse, camera);
-
-  const hits = raycaster.intersectObjects(gridCells);
-
-if(hits.length > 0){
-
-  const pos = hits[0].object.position;
-
-  const snapped = snapToGrid(pos.x, pos.z);
-
-  selected.position.x = snapped.x;
-  selected.position.z = snapped.z;
-  }
-});
 
 // =====================
 // ОБЛАКА (ОБЪЕМНЫЕ)
