@@ -9,11 +9,9 @@
 </head>
 <body>
 
-<!-- THREE -->
-<script src="https://unpkg.com/three@0.148.0/build/three.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 
-<!-- OrbitControls (совместимая версия) -->
-<script src="https://unpkg.com/three@0.148.0/examples/js/controls/OrbitControls.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
 
 <script>
 
@@ -30,7 +28,7 @@ const renderer = new THREE.WebGLRenderer({ antialias: true });
 renderer.setSize(window.innerWidth, window.innerHeight);
 document.body.appendChild(renderer.domElement);
 
-// КОНТРОЛЫ
+// ВАЖНО: правильное подключение
 const controls = new THREE.OrbitControls(camera, renderer.domElement);
 controls.target.set(0,0,0);
 controls.update();
@@ -72,7 +70,6 @@ for (let x = 0; x < size; x++) {
     cell.position.z = (z - size/2) + 0.5;
     cell.position.y = 0.51;
 
-    // овальная форма корабля
     const dx = cell.position.x / 5;
     const dz = cell.position.z / 10;
 
