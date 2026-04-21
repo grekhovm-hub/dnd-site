@@ -116,7 +116,12 @@ for(let x=0;x<size;x++){
 
     const cell = new THREE.Mesh(
       new THREE.PlaneGeometry(1,1),
-      new THREE.MeshBasicMaterial({ visible:false })
+    new THREE.MeshBasicMaterial({
+  color: 0x00ff88,
+  transparent: true,
+  opacity: 0.15,
+  side: THREE.DoubleSide
+})
     );
 
     cell.rotation.x = -Math.PI/2;
@@ -193,7 +198,11 @@ window.addEventListener("mousedown", (e)=>{
   const hits = raycaster.intersectObjects(tokens, true);
 
   if(hits.length>0){
-    selected = hits[0].object.parent;
+    let obj = hits[0].object;
+while (obj.parent && !tokens.includes(obj)) {
+  obj = obj.parent;
+}
+selected = obj;
   }
 });
 
@@ -219,8 +228,9 @@ window.addEventListener("mousemove", (e)=>{
 // =====================
 // ОБЛАКА (ОБЪЕМНЫЕ)
 // =====================
-for(let i=0;i<20;i++){
+const clouds = [];
 
+for(let i=0;i<20;i++){
   const cloud = new THREE.Group();
 
   for(let j=0;j<5;j++){
@@ -249,6 +259,7 @@ for(let i=0;i<20;i++){
   );
 
   scene.add(cloud);
+  clouds.push(cloud);
 }
 
 // =====================
@@ -257,12 +268,10 @@ for(let i=0;i<20;i++){
 function animate(){
   requestAnimationFrame(animate);
 
-  scene.children.forEach(obj=>{
-    if(obj.type==="Group" && obj !== ship){
-      obj.position.z += 0.03;
-      if(obj.position.z>25) obj.position.z = -25;
-    }
-  });
+clouds.forEach(c=>{
+  c.position.z += 0.03;
+  if(c.position.z > 25) c.position.z = -25;
+});
 
   renderer.render(scene,camera);
 }
