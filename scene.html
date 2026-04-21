@@ -205,22 +205,24 @@ window.addEventListener("mouseup", (e)=>{
   mouse.y = -(e.clientY/window.innerHeight)*2+1;
 
   raycaster.setFromCamera(mouse, camera);
+  console.log("tokenHits:", tokenHits.length);
 
   // 1. Клик по фишке
   const tokenHits = raycaster.intersectObjects(tokenMeshes);
 
   if(tokenHits.length > 0){
 
-    let obj = tokenHits[0].object;
+  let obj = tokenHits[0].object;
 
-    // поднимаемся до группы
-    while(obj.parent && !tokens.includes(obj)){
-      obj = obj.parent;
-    }
-
-    selected = obj;
-    return;
+  while(obj.parent && !tokens.includes(obj)){
+    obj = obj.parent;
   }
+
+  selected = obj;
+
+  controls.enabled = false; // 👈 ВАЖНО
+  return;
+}
 
   // 2. Если фишка выбрана — ставим
   if(selected){
@@ -236,12 +238,11 @@ window.addEventListener("mouseup", (e)=>{
       selected.position.z = snapped.z;
 
       selected = null;
+controls.enabled = true;
     }
   }
 
 });
-
-window.addEventListener("mouseup", ()=> selected=null);
 
 // =====================
 // ОБЛАКА (ОБЪЕМНЫЕ)
