@@ -178,7 +178,7 @@ function createToken(x,z){
   group.add(base, body, head);
   tokenMeshes.push(base, body, head);
 
-  group.position.set(x,0.6,z);
+  group.position.set(x,1,z);
 
   scene.add(group);
   tokens.push(group);
@@ -205,10 +205,11 @@ window.addEventListener("mouseup", (e)=>{
   mouse.y = -(e.clientY/window.innerHeight)*2+1;
 
   raycaster.setFromCamera(mouse, camera);
-  console.log("tokenHits:", tokenHits.length);
 
-  // 1. Клик по фишке
-  const tokenHits = raycaster.intersectObjects(tokenMeshes);
+// 1. Клик по фишке
+const tokenHits = raycaster.intersectObjects(tokenMeshes, true);
+
+console.log("tokenHits:", tokenHits.length);
 
   if(tokenHits.length > 0){
 
