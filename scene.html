@@ -143,6 +143,15 @@ for(let x=0;x<size;x++){
 const tokens = [];
 let selected = null;
 
+  function snapToGrid(x, z) {
+  const size = 10;
+
+  let snappedX = Math.round(x - 0.5) + 0.5;
+  let snappedZ = Math.round(z - 0.5) + 0.5;
+
+  return { x: snappedX, z: snappedZ };
+}
+  
 // создание пешки
 function createToken(x,z){
 
@@ -219,11 +228,15 @@ window.addEventListener("mousemove", (e)=>{
 
   const hits = raycaster.intersectObjects(gridCells);
 
-  if(hits.length>0){
-    selected.position.x = hits[0].object.position.x;
-    selected.position.z = hits[0].object.position.z;
-  }
-});
+if(hits.length > 0){
+
+  const pos = hits[0].object.position;
+
+  const snapped = snapToGrid(pos.x, pos.z);
+
+  selected.position.x = snapped.x;
+  selected.position.z = snapped.z;
+}
 
 // =====================
 // ОБЛАКА (ОБЪЕМНЫЕ)
