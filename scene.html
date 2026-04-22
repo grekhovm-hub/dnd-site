@@ -149,13 +149,21 @@ const tokens = [];
 const tokenMeshes = [];
 let selected = null;
 
-  function snapToGrid(x, z) {
-  const size = 10;
+function isCellOccupied(cell, ignoreToken = null) {
+  return tokens.some(token =>
+    token !== ignoreToken &&
+    Math.abs(token.position.x - cell.position.x) < 0.01 &&
+    Math.abs(token.position.z - cell.position.z) < 0.01
+  );
+}
 
-  let snappedX = Math.round(x - 0.5) + 0.5;
-  let snappedZ = Math.round(z - 0.5) + 0.5;
+function updateMouseAndRay(event) {
+  const rect = renderer.domElement.getBoundingClientRect();
 
-  return { x: snappedX, z: snappedZ };
+  mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+  mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+
+  raycaster.setFromCamera(mouse, camera);
 }
   
 // создание пешки
@@ -184,12 +192,14 @@ const head = new THREE.Mesh(
   const hitbox = new THREE.Mesh(
   new THREE.CylinderGeometry(0.6, 0.6, 2, 8),
   new THREE.MeshBasicMaterial({
-  transparent: true,
-  opacity: 0
-})
+    transparent: true,
+    opacity: 0,
+    depthWrite: false
+  })
 );
 
 hitbox.position.y = 0.8;
+hitbox.userData.token = group;
 
 group.add(hitbox);
 tokenMeshes.push(hitbox);
@@ -204,8 +214,11 @@ tokenMeshes.push(hitbox);
 // ДОБАВЛЕНИЕ ФИШКИ
 // =====================
 document.getElementById("addToken").onclick = () => {
+  const freeCells = gridCells.filter(cell => !isCellOccupied(cell));
 
-  const cell = gridCells[Math.floor(Math.random()*gridCells.length)];
+  if (freeCells.length === 0) return;
+
+  const cell = freeCells[Math.floor(Math.random() * freeCells.length)];
   createToken(cell.position.x, cell.position.z);
 };
 
@@ -215,77 +228,66 @@ document.getElementById("addToken").onclick = () => {
 const raycaster = new THREE.Raycaster();
 const mouse = new THREE.Vector2();
 
-window.addEventListener("mousedown", (e)=>{
-    
+renderer.domElement.addEventListener("mousemove", (e) => {
+  if (!selected) return;
+
+  updateMouseAndRay(e);
+
+  const gridHits = raycaster.intersectObjects(gridCells);
+
+  if (gridHits.length === 0) return;
+
+  const cell = gridHits[0].object;
+
+  // не даем таскать фишку на занятую клетку
+  if (isCellOccupied(cell, selected)) return;
+
+  selected.position.x = cell.position.x;
+  selected.position.z = cell.position.z;
+});
+
+renderer.domElement.addEventListener("mousedown", (e) => {
   if (e.button !== 0) return;
 
-  mouse.x = (e.clientX/window.innerWidth)*2-1;
-  mouse.y = -(e.clientY/window.innerHeight)*2+1;
+  updateMouseAndRay(e);
 
-  raycaster.setFromCamera(mouse, camera);
-
+  // Отладочная стрелка — если нужна
   const helper = new THREE.ArrowHelper(
-  raycaster.ray.direction,
-  raycaster.ray.origin,
-  10,
-  0xff0000
-);
+    raycaster.ray.direction.clone(),
+    raycaster.ray.origin.clone(),
+    30,
+    0xff0000
+  );
+  scene.add(helper);
+  setTimeout(() => scene.remove(helper), 200);
 
-scene.add(helper);
-  
-// 1. Клик по фишке
-const intersects = raycaster.intersectObjects(scene.children, true);
+  // 1. Если фишка еще не выбрана — пробуем выбрать
+  if (!selected) {
+    const tokenHits = raycaster.intersectObjects(tokenMeshes, true);
 
-let tokenHit = null;
-
-for (let hit of intersects) {
-  let obj = hit.object;
-
-  while (obj.parent) {
-    if (tokens.includes(obj)) {
-      tokenHit = obj;
-      break;
+    if (tokenHits.length > 0) {
+      selected = tokenHits[0].object.userData.token;
+      controls.enabled = false;
     }
-    obj = obj.parent;
+
+    return;
   }
 
-  if (tokenHit) break;
-}
+  // 2. Если фишка уже выбрана — ставим на клетку
+  const gridHits = raycaster.intersectObjects(gridCells);
 
-console.log("tokenHits:", tokenHits.length);
+  if (gridHits.length === 0) return;
 
-  if(tokenHit){
+  const cell = gridHits[0].object;
 
-  let obj = tokenHits[0].object;
+  // нельзя поставить на занятую клетку
+  if (isCellOccupied(cell, selected)) return;
 
-  while(obj.parent && !tokens.includes(obj)){
-    obj = obj.parent;
-  }
+  selected.position.x = cell.position.x;
+  selected.position.z = cell.position.z;
 
-  selected = tokenHit;
-
-  controls.enabled = false; // 👈 ВАЖНО
-  return;
-}
-
-  // 2. Если фишка выбрана — ставим
-  if(selected){
-
-    const gridHits = raycaster.intersectObjects(gridCells);
-
-    if(gridHits.length > 0){
-
-      const pos = gridHits[0].object.position;
-      const snapped = snapToGrid(pos.x, pos.z);
-
-      selected.position.x = snapped.x;
-      selected.position.z = snapped.z;
-
-      selected = null;
-controls.enabled = true;
-    }
-  }
-
+  selected = null;
+  controls.enabled = true;
 });
 
 // =====================
