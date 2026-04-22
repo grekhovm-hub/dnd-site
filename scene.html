@@ -155,6 +155,11 @@ stlLoader.load(
     mesh.position.y -= 0.35;
     shipMesh = mesh;
 scene.updateMatrixWorld(true);
+
+requestAnimationFrame(() => {
+  rebuildGridFromShip(shipMesh);
+});
+scene.updateMatrixWorld(true);
 rebuildGridFromShip(shipMesh);
 
     // Если корабль окажется развернут задом наперед —
@@ -426,44 +431,70 @@ function rebuildGridFromShip(mesh) {
   const down = new THREE.Vector3(0, -1, 0);
   const normalMatrix = new THREE.Matrix3();
 
+  const xValues = [];
+  const zValues = [];
+
   for (let x = minX + 0.5; x <= maxX - 0.5; x += GRID_STEP) {
-    for (let z = minZ + 0.5; z <= maxZ - 0.5; z += GRID_STEP) {
-      rc.set(new THREE.Vector3(x, rayStartY, z), down);
+    xValues.push(x);
+  }
 
-      const hits = rc.intersectObject(mesh, true);
-      if (hits.length === 0) continue;
+  for (let z = minZ + 0.5; z <= maxZ - 0.5; z += GRID_STEP) {
+    zValues.push(z);
+  }
 
-      const acceptedLevels = [];
+  let xi = 0;
 
-      for (const hit of hits) {
-        if (!hit.face) continue;
+  function processChunk() {
+    const startedAt = performance.now();
 
-        normalMatrix.getNormalMatrix(hit.object.matrixWorld);
-        const worldNormal = hit.face.normal
-          .clone()
-          .applyNormalMatrix(normalMatrix)
-          .normalize();
+    while (xi < xValues.length && performance.now() - startedAt < 10) {
+      const x = xValues[xi];
 
-        // берем только почти горизонтальные поверхности, смотрящие вверх
-        if (worldNormal.y < GRID_NORMAL_THRESHOLD) continue;
+      for (const z of zValues) {
+        rc.set(new THREE.Vector3(x, rayStartY, z), down);
 
-        const y = hit.point.y;
+        const hits = rc.intersectObject(mesh, true);
+        if (hits.length === 0) continue;
 
-        const alreadyExists = acceptedLevels.some(
-          existingY => Math.abs(existingY - y) < GRID_LEVEL_EPSILON
-        );
-        if (alreadyExists) continue;
+        const acceptedLevels = [];
 
-        acceptedLevels.push(y);
+        for (const hit of hits) {
+          if (!hit.face) continue;
+
+          normalMatrix.getNormalMatrix(hit.object.matrixWorld);
+          const worldNormal = hit.face.normal
+            .clone()
+            .applyNormalMatrix(normalMatrix)
+            .normalize();
+
+          if (worldNormal.y < GRID_NORMAL_THRESHOLD) continue;
+
+          const y = hit.point.y;
+
+          const alreadyExists = acceptedLevels.some(
+            existingY => Math.abs(existingY - y) < GRID_LEVEL_EPSILON
+          );
+          if (alreadyExists) continue;
+
+          acceptedLevels.push(y);
+        }
+
+        for (const levelY of acceptedLevels) {
+          createGridCell(x, levelY, z);
+        }
       }
 
-      for (const levelY of acceptedLevels) {
-        createGridCell(x, levelY, z);
-      }
+      xi++;
+    }
+
+    if (xi < xValues.length) {
+      requestAnimationFrame(processChunk);
+    } else {
+      console.log("grid cells:", gridCells.length);
     }
   }
 
-  console.log("grid cells:", gridCells.length);
+  requestAnimationFrame(processChunk);
 }
 
 // =====================
