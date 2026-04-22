@@ -194,7 +194,7 @@ hitbox.position.y = 0.8;
 group.add(hitbox);
 tokenMeshes.push(hitbox);
 
-  group.position.set(x,1,z);
+  group.position.set(x,0.51,z);
 
   scene.add(group);
   tokens.push(group);
@@ -224,6 +224,15 @@ window.addEventListener("mousedown", (e)=>{
 
   raycaster.setFromCamera(mouse, camera);
 
+  const helper = new THREE.ArrowHelper(
+  raycaster.ray.direction,
+  raycaster.ray.origin,
+  10,
+  0xff0000
+);
+
+scene.add(helper);
+  
 // 1. Клик по фишке
 const intersects = raycaster.intersectObjects(scene.children, true);
 
@@ -278,43 +287,6 @@ controls.enabled = true;
   }
 
 });
-
-// =====================
-// ОБЛАКА (ОБЪЕМНЫЕ)
-// =====================
-const clouds = [];
-
-for(let i=0;i<20;i++){
-  const cloud = new THREE.Group();
-
-  for(let j=0;j<5;j++){
-    const part = new THREE.Mesh(
-      new THREE.SphereGeometry(Math.random()*2,8,8),
-      new THREE.MeshStandardMaterial({
-        color:0xffffff,
-        transparent:true,
-        opacity:0.1
-      })
-    );
-
-    part.position.set(
-      Math.random()*4,
-      Math.random()*2,
-      Math.random()*4
-    );
-
-    cloud.add(part);
-  }
-
-  cloud.position.set(
-    (Math.random()-0.5)*50,
-    Math.random()*5,
-    (Math.random()-0.5)*50
-  );
-
-  scene.add(cloud);
-  clouds.push(cloud);
-}
 
 // =====================
 // АНИМАЦИЯ
