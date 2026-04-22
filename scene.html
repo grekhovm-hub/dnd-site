@@ -507,11 +507,6 @@ function animate() {
     }
   }
 
-  // легкая качка корабля
-  ship.rotation.z = Math.sin(t * 0.9) * 0.018;
-  ship.rotation.x = Math.sin(t * 0.6) * 0.01;
-  ship.position.y = Math.sin(t * 1.2) * 0.12;
-
   renderer.render(scene, camera);
 }
 animate();
