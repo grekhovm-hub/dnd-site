@@ -42,6 +42,15 @@ body {
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x000814);
 
+const LAYER_DEFAULT = 0;
+const LAYER_TOKEN = 1;
+const LAYER_GRID = 2;
+
+function setLayerRecursive(obj, layer) {
+  obj.layers.set(layer);
+  obj.traverse(child => child.layers.set(layer));
+}
+
 // =====================
 // КАМЕРА
 // =====================
@@ -145,8 +154,9 @@ for (let x = 0; x < size; x++) {
 
     if (dx * dx + dz * dz > 1) continue;
 
-    scene.add(cell);
-    gridCells.push(cell);
+cell.layers.set(LAYER_GRID);
+scene.add(cell);
+gridCells.push(cell);
   }
 }
 
@@ -215,12 +225,14 @@ function createToken(x, z) {
   head.position.y = 0.8;
 
   group.add(base, body, head);
-  group.position.set(x, 0.51, z);
+group.position.set(x, 0.51, z);
 
-  scene.add(group);
-  tokens.push(group);
+setLayerRecursive(group, LAYER_TOKEN);
 
-  group.updateMatrixWorld(true);
+scene.add(group);
+tokens.push(group);
+
+group.updateMatrixWorld(true);
 }
 
 // =====================
@@ -241,14 +253,26 @@ document.getElementById("addToken").onclick = () => {
 const raycaster = new THREE.Raycaster();
 const mouse = new THREE.Vector2();
 
-// фишка "прилипает" к курсору после выбора
-renderer.domElement.addEventListener("mousemove", (e) => {
+function getTokenRoot(object) {
+  let obj = object;
+
+  while (obj) {
+    if (obj.userData && obj.userData.isToken) return obj;
+    obj = obj.parent;
+  }
+
+  return null;
+}
+
+renderer.domElement.addEventListener("pointermove", (e) => {
   if (!selected) return;
 
   updateMouseAndRay(e);
   scene.updateMatrixWorld(true);
 
+  raycaster.layers.set(LAYER_GRID);
   const gridHits = raycaster.intersectObjects(gridCells, false);
+
   if (gridHits.length === 0) return;
 
   const cell = gridHits[0].object;
@@ -259,16 +283,19 @@ renderer.domElement.addEventListener("mousemove", (e) => {
   selected.position.z = cell.position.z;
 });
 
-// ЛКМ: выбрать фишку / поставить фишку
-renderer.domElement.addEventListener("mousedown", (e) => {
+renderer.domElement.addEventListener("pointerdown", (e) => {
   if (e.button !== 0) return;
 
+  e.preventDefault();
   updateMouseAndRay(e);
   scene.updateMatrixWorld(true);
 
-  // 1. Если фишка еще не выбрана — пробуем выбрать
+  // 1. Выбор фишки
   if (!selected) {
+    raycaster.layers.set(LAYER_TOKEN);
     const tokenHits = raycaster.intersectObjects(tokens, true);
+
+    console.log("tokenHits:", tokenHits.length, tokenHits[0]?.object);
 
     if (tokenHits.length > 0) {
       const token = getTokenRoot(tokenHits[0].object);
@@ -276,6 +303,7 @@ renderer.domElement.addEventListener("mousedown", (e) => {
       if (token) {
         selected = token;
         setTokenSelected(selected, true);
+        selected.position.y = 0.7; // чуть приподнимаем для наглядности
         controls.enabled = false;
       }
     }
@@ -283,8 +311,12 @@ renderer.domElement.addEventListener("mousedown", (e) => {
     return;
   }
 
-  // 2. Если фишка уже выбрана — ставим на свободную клетку
+  // 2. Постановка на клетку
+  raycaster.layers.set(LAYER_GRID);
   const gridHits = raycaster.intersectObjects(gridCells, false);
+
+  console.log("gridHits:", gridHits.length, gridHits[0]?.object);
+
   if (gridHits.length === 0) return;
 
   const cell = gridHits[0].object;
@@ -292,6 +324,7 @@ renderer.domElement.addEventListener("mousedown", (e) => {
   if (isCellOccupied(cell, selected)) return;
 
   selected.position.x = cell.position.x;
+  selected.position.y = 0.51;
   selected.position.z = cell.position.z;
 
   setTokenSelected(selected, false);
