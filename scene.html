@@ -309,11 +309,19 @@ function halfWidthAt(z) {
   return 2.5;
 }
 
+function railHalfWidthAt(z) {
+  if (z < -12.3 || z > 12.2) return 0;
+  return Math.max(0, halfWidthAt(z) - 0.30);
+}
+
+function deckHalfWidthAt(z) {
+  if (z < -12.3 || z > 12.2) return 0;
+  return Math.max(0, railHalfWidthAt(z) - 0.02);
+}
+
 function walkableHalfWidthAt(z) {
   if (z < -12.3 || z > 12.2) return 0;
-
-  // палуба внутри линии перил
-  return Math.max(0, halfWidthAt(z) - 0.42);
+  return Math.max(0, deckHalfWidthAt(z) - 0.18);
 }
 
 function isInsideWalkableDeck(x, z) {
@@ -321,11 +329,11 @@ function isInsideWalkableDeck(x, z) {
   return hw > 0 && Math.abs(x) <= hw;
 }
 
-function createWalkableDeckShape() {
+function createDeckShapeFromHalfWidth(widthFn) {
   const zVals = [-12.0, -11.0, -9.0, -7.0, -5.0, -2.0, 1.0, 4.0, 6.5, 8.8, 10.5, 11.7];
 
   const right = zVals.map(z => ({
-    x: walkableHalfWidthAt(z),
+    x: widthFn(z),
     z
   }));
 
@@ -355,7 +363,7 @@ function createWalkableDeckShape() {
 
   shape.closePath();
   return shape;
-}  
+} 
   
 function createDeckEdgeShape(railOffset = 0.05) {
   const zVals = [-12.2, -11.0, -9.0, -7.0, -5.0, -2.0, 1.0, 4.0, 6.5, 8.8, 10.5, 11.8, 12.3];
@@ -408,14 +416,14 @@ const hullOuter = new THREE.Mesh(
   makeExtruded(createShipShape(1.06), 0.95),
   hullMat
 );
-hullOuter.position.y = -0.20;
+hullOuter.position.y = -0.58;
 ship.add(hullOuter);
 
 const hullMid = new THREE.Mesh(
   makeExtruded(createShipShape(0.92), 0.85),
   hullDarkMat
 );
-hullMid.position.y = -0.95;
+hullMid.position.y = -1.08;
 ship.add(hullMid);
 
 const keel = new THREE.Mesh(
@@ -427,7 +435,7 @@ ship.add(keel);
 
 // ---------- палуба ----------
 // ---------- палуба по линии перил ----------
-const deckShape = createWalkableDeckShape();
+const deckShape = createDeckShapeFromHalfWidth(deckHalfWidthAt);
 
 const deckGeom = new THREE.ShapeGeometry(deckShape, 64);
 deckGeom.rotateX(-Math.PI / 2);
@@ -438,7 +446,7 @@ ship.add(deck);
 
 // тонкая кромка под палубой
 const deckLip = new THREE.Mesh(
-  makeExtruded(createWalkableDeckShape(), 0.10),
+  makeExtruded(createDeckShapeFromHalfWidth(deckHalfWidthAt), 0.10),
   trimMat
 );
 deckLip.position.y = 0.29;
@@ -546,7 +554,7 @@ const railPointsLeft = [];
 const railPointsRight = [];
 
 for (let z = -8.5; z <= 8.5; z += 1.7) {
-  const x = halfWidthAt(z) - 0.30;
+  const x = railHalfWidthAt(z);
   railPointsLeft.push({ x: -x, z });
   railPointsRight.push({ x: x, z });
 }
