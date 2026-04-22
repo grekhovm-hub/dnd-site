@@ -309,6 +309,54 @@ function halfWidthAt(z) {
   return 2.5;
 }
 
+function walkableHalfWidthAt(z) {
+  if (z < -12.3 || z > 12.2) return 0;
+
+  // палуба внутри линии перил
+  return Math.max(0, halfWidthAt(z) - 0.42);
+}
+
+function isInsideWalkableDeck(x, z) {
+  const hw = walkableHalfWidthAt(z);
+  return hw > 0 && Math.abs(x) <= hw;
+}
+
+function createWalkableDeckShape() {
+  const zVals = [-12.0, -11.0, -9.0, -7.0, -5.0, -2.0, 1.0, 4.0, 6.5, 8.8, 10.5, 11.7];
+
+  const right = zVals.map(z => ({
+    x: walkableHalfWidthAt(z),
+    z
+  }));
+
+  const shape = new THREE.Shape();
+
+  shape.moveTo(0, -12.5);
+
+  shape.quadraticCurveTo(
+    right[0].x * 0.45, -12.35,
+    right[0].x, right[0].z
+  );
+
+  for (let i = 1; i < right.length; i++) {
+    shape.lineTo(right[i].x, right[i].z);
+  }
+
+  shape.lineTo(-right[right.length - 1].x, right[right.length - 1].z);
+
+  for (let i = right.length - 2; i >= 0; i--) {
+    shape.lineTo(-right[i].x, right[i].z);
+  }
+
+  shape.quadraticCurveTo(
+    -right[0].x * 0.45, -12.35,
+    0, -12.5
+  );
+
+  shape.closePath();
+  return shape;
+}  
+  
 function createDeckEdgeShape(railOffset = 0.05) {
   const zVals = [-12.2, -11.0, -9.0, -7.0, -5.0, -2.0, 1.0, 4.0, 6.5, 8.8, 10.5, 11.8, 12.3];
 
@@ -379,7 +427,7 @@ ship.add(keel);
 
 // ---------- палуба ----------
 // ---------- палуба по линии перил ----------
-const deckShape = createDeckEdgeShape(0.05);
+const deckShape = createWalkableDeckShape();
 
 const deckGeom = new THREE.ShapeGeometry(deckShape, 64);
 deckGeom.rotateX(-Math.PI / 2);
@@ -388,21 +436,21 @@ const deck = new THREE.Mesh(deckGeom, deckMat);
 deck.position.y = 0.39;
 ship.add(deck);
 
-// тонкая кромка палубы вниз, чтобы край читался объемно
+// тонкая кромка под палубой
 const deckLip = new THREE.Mesh(
-  makeExtruded(createDeckEdgeShape(0.02), 0.12),
+  makeExtruded(createWalkableDeckShape(), 0.10),
   trimMat
 );
-deckLip.position.y = 0.27;
+deckLip.position.y = 0.29;
 ship.add(deckLip);
 
-// центральная темная дорожка — чуть уже
+// центральная дорожка
 const centerStrip = new THREE.Mesh(
-  new THREE.PlaneGeometry(0.95, 18.2),
+  new THREE.PlaneGeometry(0.95, 18.0),
   new THREE.MeshStandardMaterial({
     color: 0x7d4f2d,
     transparent: true,
-    opacity: 0.24,
+    opacity: 0.22,
     roughness: 1
   })
 );
@@ -686,18 +734,17 @@ for (let x = 0; x < size; x++) {
     const cell = new THREE.Mesh(
       new THREE.PlaneGeometry(1, 1),
       new THREE.MeshBasicMaterial({
-        color: 0x00ff88,
-        transparent: true,
-        opacity: 0.15,
-        side: THREE.DoubleSide
-      })
+  color: 0x00ff88,
+  transparent: true,
+  opacity: 0.07,
+  side: THREE.DoubleSide
+})
     );
 
     cell.rotation.x = -Math.PI / 2;
-    cell.position.set((x - size / 2) + 0.5, 0.51, (z - size / 2) + 0.5);
+    cell.position.set((x - size / 2) + 0.5, 0.405, (z - size / 2) + 0.5);
 
-    const dx = cell.position.x / 5;
-    const dz = cell.position.z / 10;
+   if (!isInsideWalkableDeck(cell.position.x, cell.position.z)) continue;
 
     if (dx * dx + dz * dz > 1) continue;
 
