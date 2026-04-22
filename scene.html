@@ -225,11 +225,27 @@ window.addEventListener("mousedown", (e)=>{
   raycaster.setFromCamera(mouse, camera);
 
 // 1. Клик по фишке
-const tokenHits = raycaster.intersectObjects(tokenMeshes, true);
+const intersects = raycaster.intersectObjects(scene.children, true);
+
+let tokenHit = null;
+
+for (let hit of intersects) {
+  let obj = hit.object;
+
+  while (obj.parent) {
+    if (tokens.includes(obj)) {
+      tokenHit = obj;
+      break;
+    }
+    obj = obj.parent;
+  }
+
+  if (tokenHit) break;
+}
 
 console.log("tokenHits:", tokenHits.length);
 
-  if(tokenHits.length > 0){
+  if(tokenHit){
 
   let obj = tokenHits[0].object;
 
@@ -237,7 +253,7 @@ console.log("tokenHits:", tokenHits.length);
     obj = obj.parent;
   }
 
-  selected = obj;
+  selected = tokenHit;
 
   controls.enabled = false; // 👈 ВАЖНО
   return;
