@@ -50,7 +50,8 @@ const GRID_STEP = 1;
 const GRID_SURFACE_OFFSET = 0.03;
 const GRID_NORMAL_THRESHOLD = 0.72;
 const GRID_LEVEL_EPSILON = 0.12;
-const TOKEN_Y_OFFSET = 0.105;  
+const GRID_SUPPORT_RADIUS = GRID_STEP * 0.38;
+const TOKEN_Y_OFFSET = 0.105;
 
 function enableLayerRecursive(obj, layer) {
   obj.layers.enable(layer);
@@ -382,6 +383,41 @@ function createGridCell(x, surfaceY, z) {
   gridCells.push(fill);
 }
 
+function pointSupportsLevel(mesh, rc, down, normalMatrix, x, z, rayStartY, targetY) {
+  rc.set(new THREE.Vector3(x, rayStartY, z), down);
+
+  const hits = rc.intersectObject(mesh, true);
+
+  for (const hit of hits) {
+    if (!hit.face) continue;
+
+    normalMatrix.getNormalMatrix(hit.object.matrixWorld);
+    const worldNormal = hit.face.normal
+      .clone()
+      .applyNormalMatrix(normalMatrix)
+      .normalize();
+
+    if (worldNormal.y < GRID_NORMAL_THRESHOLD) continue;
+
+    if (Math.abs(hit.point.y - targetY) < GRID_LEVEL_EPSILON) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+function cellHasEnoughSupport(mesh, rc, down, normalMatrix, x, z, rayStartY, targetY) {
+  const r = GRID_SUPPORT_RADIUS;
+
+  return (
+    pointSupportsLevel(mesh, rc, down, normalMatrix, x - r, z, rayStartY, targetY) &&
+    pointSupportsLevel(mesh, rc, down, normalMatrix, x + r, z, rayStartY, targetY) &&
+    pointSupportsLevel(mesh, rc, down, normalMatrix, x, z - r, rayStartY, targetY) &&
+    pointSupportsLevel(mesh, rc, down, normalMatrix, x, z + r, rayStartY, targetY)
+  );
+}
+  
 function rebuildGridFromShip(mesh) {
   if (!mesh) return;
 
@@ -449,9 +485,12 @@ function rebuildGridFromShip(mesh) {
         }
 
         for (const levelY of acceptedLevels) {
-          createGridCell(x, levelY, z);
-        }
-      }
+  if (!cellHasEnoughSupport(mesh, rc, down, normalMatrix, x, z, rayStartY, levelY)) {
+    continue;
+  }
+
+  createGridCell(x, levelY, z);
+}
 
       xi++;
     }
