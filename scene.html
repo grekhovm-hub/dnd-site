@@ -95,146 +95,83 @@ scene.add(light);
 // КОРАБЛЬ
 // =====================
 // =====================
-// КОРАБЛЬ — ДЕТАЛЬНАЯ ПАЛУБА В ВИДЕ СВЕРХУ
+// КОРАБЛЬ — ОБЪЕМНЫЙ КОРПУС
 // =====================
 const ship = new THREE.Group();
 
-function createShipShape(scale = 1) {
-  const s = new THREE.Shape();
+// ---------- материалы ----------
+const hullMat = new THREE.MeshStandardMaterial({
+  color: 0x4a2d1c,
+  roughness: 0.95
+});
 
-  s.moveTo(0, -12.0 * scale);
+const hullDarkMat = new THREE.MeshStandardMaterial({
+  color: 0x2f1b12,
+  roughness: 0.98
+});
 
-  s.bezierCurveTo(
-    2.4 * scale, -11.2 * scale,
-    5.3 * scale, -7.0 * scale,
-    5.15 * scale, 1.8 * scale
-  );
+const deckWoodMat = new THREE.MeshStandardMaterial({
+  color: 0xa56b3f,
+  roughness: 0.96
+});
 
-  s.quadraticCurveTo(
-    5.0 * scale, 8.8 * scale,
-    3.5 * scale, 11.4 * scale
-  );
+const railMat = new THREE.MeshStandardMaterial({
+  color: 0x5b3723,
+  roughness: 0.95
+});
 
-  s.quadraticCurveTo(
-    1.8 * scale, 12.5 * scale,
-    0, 12.0 * scale
-  );
+const trimMat = new THREE.MeshStandardMaterial({
+  color: 0x7a4c2d,
+  roughness: 0.93
+});
 
-  s.quadraticCurveTo(
-    -1.8 * scale, 12.5 * scale,
-    -3.5 * scale, 11.4 * scale
-  );
+const metalMat = new THREE.MeshStandardMaterial({
+  color: 0x626872,
+  roughness: 0.7,
+  metalness: 0.5
+});
 
-  s.quadraticCurveTo(
-    -5.0 * scale, 8.8 * scale,
-    -5.15 * scale, 1.8 * scale
-  );
+const brassMat = new THREE.MeshStandardMaterial({
+  color: 0xb38a42,
+  roughness: 0.45,
+  metalness: 0.85
+});
 
-  s.bezierCurveTo(
-    -5.3 * scale, -7.0 * scale,
-    -2.4 * scale, -11.2 * scale,
-    0, -12.0 * scale
-  );
-
-  return s;
-}
-
-function addMesh(geometry, material, x, y, z, rx = 0, ry = 0, rz = 0) {
-  const mesh = new THREE.Mesh(geometry, material);
-  mesh.position.set(x, y, z);
-  mesh.rotation.set(rx, ry, rz);
-  ship.add(mesh);
-  return mesh;
-}
-
-function addBox(w, h, d, material, x, y, z, rx = 0, ry = 0, rz = 0) {
-  return addMesh(new THREE.BoxGeometry(w, h, d), material, x, y, z, rx, ry, rz);
-}
-
-function addCylinder(rt, rb, h, seg, material, x, y, z, rx = 0, ry = 0, rz = 0) {
-  return addMesh(new THREE.CylinderGeometry(rt, rb, h, seg), material, x, y, z, rx, ry, rz);
-}
-
-function addPlane(w, h, material, x, y, z, rx = -Math.PI / 2, ry = 0, rz = 0) {
-  return addMesh(new THREE.PlaneGeometry(w, h), material, x, y, z, rx, ry, rz);
-}
-
-function addRailPost(x, z) {
-  addBox(0.10, 0.45, 0.10, railMat, x, 0.68, z);
-}
-
-function addLamp(x, z) {
-  addCylinder(0.04, 0.04, 0.28, 10, brassMat, x, 0.66, z);
-  addMesh(
-    new THREE.SphereGeometry(0.07, 12, 12),
-    lampMat,
-    x, 0.86, z
-  );
-}
-
-function addSideBundle(side, z, angle = 0) {
-  const x = side * (Math.abs(z) > 7 ? 2.8 : Math.abs(z) > 4 ? 3.6 : 4.0);
-
-  addBox(0.85, 0.18, 0.70, darkWoodMat, x, 0.57, z, 0, 0, angle);
-  addBox(0.58, 0.22, 0.45, clothMat, x, 0.73, z, 0, 0, angle);
-}
-
-function addSteps(centerZ, stepCount, dir = 1) {
-  for (let i = 0; i < stepCount; i++) {
-    addBox(
-      1.8 - i * 0.12,
-      0.10,
-      0.32,
-      darkWoodMat,
-      0,
-      0.56 + i * 0.06,
-      centerZ + i * 0.28 * dir
-    );
-  }
-}
-
-function addChair(x, z, rotY = 0) {
-  addBox(0.42, 0.10, 0.42, redFabricMat, x, 0.62, z, 0, rotY, 0);
-  addBox(0.42, 0.42, 0.08, darkWoodMat, x, 0.79, z - 0.16 * Math.cos(rotY), 0, rotY, 0);
-}
-
+// ---------- текстура палубы ----------
 function createDeckTexture() {
   const canvas = document.createElement("canvas");
   canvas.width = 1024;
   canvas.height = 2048;
   const ctx = canvas.getContext("2d");
 
-  ctx.fillStyle = "#a46a3b";
+  ctx.fillStyle = "#9e663b";
   ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-  // длинные доски
   let x = 0;
   while (x < canvas.width) {
-    const w = 18 + Math.random() * 16;
-    const tone = 120 + Math.floor(Math.random() * 45);
-    ctx.fillStyle = `rgb(${tone + 20}, ${tone}, ${Math.max(40, tone - 35)})`;
+    const w = 20 + Math.random() * 18;
+    const tone = 105 + Math.floor(Math.random() * 35);
+
+    ctx.fillStyle = `rgb(${tone + 28}, ${tone}, ${Math.max(40, tone - 35)})`;
     ctx.fillRect(x, 0, w, canvas.height);
 
-    ctx.fillStyle = "rgba(60, 35, 18, 0.35)";
+    ctx.fillStyle = "rgba(50,28,14,0.28)";
     ctx.fillRect(x + w - 2, 0, 2, canvas.height);
 
-    // поперечные стыки досок
-    for (let y = 0; y < canvas.height; y += 180 + Math.random() * 120) {
-      const yy = y + Math.random() * 30;
-      ctx.fillStyle = "rgba(50, 30, 15, 0.28)";
-      ctx.fillRect(x + 2, yy, Math.max(6, w - 4), 2);
+    for (let y = 40; y < canvas.height; y += 140 + Math.random() * 90) {
+      ctx.fillStyle = "rgba(45,26,13,0.22)";
+      ctx.fillRect(x + 2, y, Math.max(4, w - 4), 2);
     }
 
     x += w;
   }
 
-  // легкие царапины / шум
-  for (let i = 0; i < 1800; i++) {
+  for (let i = 0; i < 1400; i++) {
     const xx = Math.random() * canvas.width;
     const yy = Math.random() * canvas.height;
-    const len = 4 + Math.random() * 18;
+    const len = 4 + Math.random() * 14;
 
-    ctx.strokeStyle = `rgba(255,255,255,${0.015 + Math.random() * 0.02})`;
+    ctx.strokeStyle = `rgba(255,255,255,${0.01 + Math.random() * 0.02})`;
     ctx.beginPath();
     ctx.moveTo(xx, yy);
     ctx.lineTo(xx + len, yy + (Math.random() - 0.5) * 4);
@@ -247,214 +184,312 @@ function createDeckTexture() {
   return tex;
 }
 
-// если у тебя будет своя топ-даун текстура палубы,
-// замени useImageDeck = true и путь ниже на свой PNG/JPG
-const useImageDeck = false;
-const deckTexture = useImageDeck
-  ? new THREE.TextureLoader().load("textures/airship-deck-topdown.png")
-  : createDeckTexture();
-
-deckTexture.colorSpace = THREE.SRGBColorSpace;
-deckTexture.anisotropy = renderer.capabilities.getMaxAnisotropy();
-
-// материалы
-const hullMat = new THREE.MeshStandardMaterial({
-  color: 0x3b2417,
-  roughness: 0.95
-});
-
-const railMat = new THREE.MeshStandardMaterial({
-  color: 0x4a2c1b,
-  roughness: 0.92
-});
+const deckTexture = createDeckTexture();
 
 const deckMat = new THREE.MeshStandardMaterial({
   map: deckTexture,
   color: 0xffffff,
-  roughness: 0.96
+  roughness: 0.97
 });
 
-const darkWoodMat = new THREE.MeshStandardMaterial({
-  color: 0x5a341e,
-  roughness: 0.94
-});
+// ---------- форма корабля ----------
+function createShipShape(scale = 1) {
+  const s = new THREE.Shape();
 
-const metalMat = new THREE.MeshStandardMaterial({
-  color: 0x58616c,
-  roughness: 0.7,
-  metalness: 0.55
-});
+  // нос в -Z, корма в +Z
+  s.moveTo(0, -13.5 * scale);
 
-const brassMat = new THREE.MeshStandardMaterial({
-  color: 0xb1843f,
-  roughness: 0.45,
-  metalness: 0.85
-});
+  s.bezierCurveTo(
+    1.4 * scale, -13.1 * scale,
+    3.6 * scale, -10.0 * scale,
+    4.3 * scale, -6.2 * scale
+  );
 
-const clothMat = new THREE.MeshStandardMaterial({
-  color: 0xd7d0c2,
-  roughness: 1.0
-});
+  s.bezierCurveTo(
+    4.9 * scale, -2.4 * scale,
+    4.8 * scale, 4.5 * scale,
+    4.1 * scale, 8.6 * scale
+  );
 
-const blueFabricMat = new THREE.MeshStandardMaterial({
-  color: 0x355f8c,
-  roughness: 0.95
-});
+  s.quadraticCurveTo(
+    3.8 * scale, 10.5 * scale,
+    3.2 * scale, 11.7 * scale
+  );
 
-const purpleFabricMat = new THREE.MeshStandardMaterial({
-  color: 0x6d4fa3,
-  roughness: 0.95
-});
+  // плоская корма
+  s.lineTo(2.8 * scale, 12.8 * scale);
+  s.lineTo(-2.8 * scale, 12.8 * scale);
 
-const redFabricMat = new THREE.MeshStandardMaterial({
-  color: 0x8b2f2f,
-  roughness: 0.95
-});
+  s.quadraticCurveTo(
+    -3.8 * scale, 10.5 * scale,
+    -4.1 * scale, 8.6 * scale
+  );
 
-const lampMat = new THREE.MeshBasicMaterial({
-  color: 0xffc76a
-});
+  s.bezierCurveTo(
+    -4.8 * scale, 4.5 * scale,
+    -4.9 * scale, -2.4 * scale,
+    -4.3 * scale, -6.2 * scale
+  );
 
-// корпус
-const hullShape = createShipShape(1.04);
-const deckShape = createShipShape(1.0);
+  s.bezierCurveTo(
+    -3.6 * scale, -10.0 * scale,
+    -1.4 * scale, -13.1 * scale,
+    0, -13.5 * scale
+  );
 
-const hullGeom = new THREE.ExtrudeGeometry(hullShape, {
-  depth: 0.72,
-  bevelEnabled: false,
-  curveSegments: 48
-});
-hullGeom.rotateX(-Math.PI / 2);
+  return s;
+}
 
-const hull = new THREE.Mesh(hullGeom, hullMat);
-hull.position.y = 0.43; // ниже сетки
-ship.add(hull);
+function makeExtruded(shape, depth) {
+  const geom = new THREE.ExtrudeGeometry(shape, {
+    depth,
+    bevelEnabled: false,
+    curveSegments: 64
+  });
+  geom.rotateX(-Math.PI / 2);
+  return geom;
+}
 
-// палуба
-const deckGeom = new THREE.ShapeGeometry(deckShape, 48);
+function addBox(w, h, d, mat, x, y, z, rx = 0, ry = 0, rz = 0) {
+  const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat);
+  m.position.set(x, y, z);
+  m.rotation.set(rx, ry, rz);
+  ship.add(m);
+  return m;
+}
+
+function addCylinder(rt, rb, h, seg, mat, x, y, z, rx = 0, ry = 0, rz = 0) {
+  const m = new THREE.Mesh(new THREE.CylinderGeometry(rt, rb, h, seg), mat);
+  m.position.set(x, y, z);
+  m.rotation.set(rx, ry, rz);
+  ship.add(m);
+  return m;
+}
+
+function addRailPost(x, z, y = 0.95) {
+  addBox(0.08, 0.38, 0.08, railMat, x, y, z);
+}
+
+function addRailSegment(x1, z1, x2, z2, y) {
+  const dx = x2 - x1;
+  const dz = z2 - z1;
+  const len = Math.sqrt(dx * dx + dz * dz);
+
+  const rail = new THREE.Mesh(
+    new THREE.BoxGeometry(0.08, 0.08, len),
+    railMat
+  );
+
+  rail.position.set((x1 + x2) / 2, y, (z1 + z2) / 2);
+  rail.rotation.y = Math.atan2(dx, dz);
+  ship.add(rail);
+}
+
+function addStepRun(centerZ, steps, dir = 1, startY = 0.52) {
+  for (let i = 0; i < steps; i++) {
+    addBox(
+      1.8 - i * 0.16,
+      0.08,
+      0.30,
+      trimMat,
+      0,
+      startY + i * 0.07,
+      centerZ + i * 0.28 * dir
+    );
+  }
+}
+
+function halfWidthAt(z) {
+  if (z < -12) return 0.7;
+  if (z < -9)  return THREE.MathUtils.lerp(1.0, 2.8, (z + 12) / 3);
+  if (z < -5)  return THREE.MathUtils.lerp(2.8, 4.0, (z + 9) / 4);
+  if (z < 5)   return 4.15;
+  if (z < 9)   return THREE.MathUtils.lerp(4.15, 3.5, (z - 5) / 4);
+  if (z < 12.4) return THREE.MathUtils.lerp(3.5, 2.7, (z - 9) / 3.4);
+  return 2.5;
+}
+
+// ---------- нижний корпус ----------
+const hullOuter = new THREE.Mesh(
+  makeExtruded(createShipShape(1.06), 0.95),
+  hullMat
+);
+hullOuter.position.y = -0.20;
+ship.add(hullOuter);
+
+const hullMid = new THREE.Mesh(
+  makeExtruded(createShipShape(0.92), 0.85),
+  hullDarkMat
+);
+hullMid.position.y = -0.95;
+ship.add(hullMid);
+
+const keel = new THREE.Mesh(
+  makeExtruded(createShipShape(0.55), 0.70),
+  hullDarkMat
+);
+keel.position.y = -1.55;
+ship.add(keel);
+
+// ---------- палуба ----------
+const deckGeom = new THREE.ShapeGeometry(createShipShape(0.87), 64);
 deckGeom.rotateX(-Math.PI / 2);
 
 const deck = new THREE.Mesh(deckGeom, deckMat);
-deck.position.y = 0.465; // ниже зеленой сетки
+deck.position.y = 0.38;
 ship.add(deck);
 
-// темная центральная полоса
-const stripGeom = new THREE.PlaneGeometry(1.1, 20.0);
-const stripMat = new THREE.MeshStandardMaterial({
-  color: 0x8d5c33,
-  transparent: true,
-  opacity: 0.30,
-  roughness: 1.0
-});
-const strip = new THREE.Mesh(stripGeom, stripMat);
-strip.rotation.x = -Math.PI / 2;
-strip.position.set(0, 0.468, 0.2);
-ship.add(strip);
+// центральная темная дорожка
+const centerStrip = new THREE.Mesh(
+  new THREE.PlaneGeometry(1.1, 19.0),
+  new THREE.MeshStandardMaterial({
+    color: 0x7d4f2d,
+    transparent: true,
+    opacity: 0.28,
+    roughness: 1
+  })
+);
+centerStrip.rotation.x = -Math.PI / 2;
+centerStrip.position.set(0, 0.385, 0.8);
+ship.add(centerStrip);
 
-// борта — стойки
-const railPoints = [
-  { z: -9.8, x: 1.6 },
-  { z: -8.2, x: 2.5 },
-  { z: -6.5, x: 3.4 },
-  { z: -4.5, x: 4.0 },
-  { z: -2.0, x: 4.35 },
-  { z:  1.0, x: 4.35 },
-  { z:  4.0, x: 4.15 },
-  { z:  6.5, x: 3.8 },
-  { z:  8.8, x: 3.1 },
-  { z: 10.5, x: 2.4 }
+// ---------- борта / фальшборт ----------
+const bulwarkShape = createShipShape(1.0);
+const innerHole = new THREE.Path(createShipShape(0.89).getPoints(96));
+bulwarkShape.holes.push(innerHole);
+
+const bulwark = new THREE.Mesh(
+  makeExtruded(bulwarkShape, 0.34),
+  trimMat
+);
+bulwark.position.y = 0.38;
+ship.add(bulwark);
+
+// верхняя кромка борта
+const rim = new THREE.Mesh(
+  makeExtruded(createShipShape(1.01), 0.06),
+  railMat
+);
+rim.position.y = 0.72;
+ship.add(rim);
+
+// ---------- носовая площадка ----------
+addBox(2.8, 0.22, 4.2, trimMat, 0, 0.63, -9.0);
+addStepRun(-7.8, 4, -1, 0.48);
+
+// носовые перила
+const bowRailPts = [
+  { x: -1.15, z: -11.0 },
+  { x: -0.85, z: -12.0 },
+  { x:  0.00, z: -12.6 },
+  { x:  0.85, z: -12.0 },
+  { x:  1.15, z: -11.0 }
 ];
 
-for (const p of railPoints) {
-  addRailPost( p.x, p.z);
-  addRailPost(-p.x, p.z);
+for (const p of bowRailPts) addRailPost(p.x, p.z, 1.00);
+for (let i = 0; i < bowRailPts.length - 1; i++) {
+  addRailSegment(
+    bowRailPts[i].x, bowRailPts[i].z,
+    bowRailPts[i + 1].x, bowRailPts[i + 1].z,
+    1.08
+  );
 }
 
-// тонкие продольные борта
-for (const side of [-1, 1]) {
-  addBox(0.16, 0.16, 8.5, railMat, side * 4.45, 0.78, -0.8, 0, 0, side * 0.08);
-  addBox(0.16, 0.16, 5.8, railMat, side * 3.9,  0.78,  7.0, 0, 0, side * 0.15);
-  addBox(0.16, 0.16, 4.6, railMat, side * 3.0,  0.78, -7.9, 0, 0, side * 0.32);
+// бушприт
+addCylinder(0.05, 0.08, 2.8, 10, railMat, 0, 0.92, -13.9, Math.PI / 2, 0, 0);
+
+// ---------- центральная палубная зона ----------
+addBox(1.9, 0.18, 2.6, trimMat, 0, 0.50, -1.0);
+addBox(1.0, 0.28, 1.4, metalMat, 0, 0.64, 0.2);
+
+addCylinder(0.25, 0.30, 0.36, 16, brassMat, 0, 0.70, 0.2);
+addCylinder(0.10, 0.10, 0.30, 12, metalMat, 0, 0.95, 0.2);
+
+// боковые блоки/ящики
+for (const z of [-4.8, -3.0, -1.2, 1.0, 3.2, 5.4]) {
+  const x = Math.abs(z) > 4 ? 3.25 : 3.65;
+  addBox(0.85, 0.22, 0.75, railMat, -x, 0.56, z, 0, 0, -0.14);
+  addBox(0.85, 0.22, 0.75, railMat,  x, 0.56, z, 0, 0,  0.14);
 }
 
-// носовая часть
-addBox(1.6, 0.5, 1.2, darkWoodMat, 0, 0.72, -5.9);
-addSteps(-4.8, 4, 1);
+// ---------- кормовая надстройка ----------
+addBox(5.2, 0.26, 3.6, trimMat, 0, 0.72, 10.0);
 
-addBox(0.95, 0.16, 0.18, railMat, 0, 0.62, -8.4);
-addBox(0.95, 0.16, 0.18, railMat, 0, 0.62, -8.0);
-addBox(0.95, 0.16, 0.18, railMat, 0, 0.62, -7.6);
+// стены кормовой надстройки
+addBox(5.2, 1.55, 0.18, hullMat, 0, 1.52, 11.7);
+addBox(0.18, 1.25, 2.8, hullMat, -2.5, 1.38, 10.2);
+addBox(0.18, 1.25, 2.8, hullMat,  2.5, 1.38, 10.2);
 
-// центральный технический отсек / колодец
-const ovalFloor = new THREE.Mesh(
-  new THREE.CircleGeometry(1.85, 40),
-  metalMat
-);
-ovalFloor.rotation.x = -Math.PI / 2;
-ovalFloor.scale.set(1.0, 1.45, 1.0);
-ovalFloor.position.set(0, 0.49, 0.4);
-ship.add(ovalFloor);
+// внутренняя верхняя площадка
+addBox(3.0, 0.18, 2.2, deckWoodMat, 0, 1.28, 10.2);
 
-const ovalRim = new THREE.Mesh(
-  new THREE.TorusGeometry(1.72, 0.08, 12, 48),
-  brassMat
-);
-ovalRim.rotation.x = Math.PI / 2;
-ovalRim.scale.set(1.0, 1.42, 1.0);
-ovalRim.position.set(0, 0.55, 0.4);
-ship.add(ovalRim);
+// лестница на корму
+addStepRun(7.9, 5, 1, 0.48);
 
-addCylinder(0.26, 0.34, 0.44, 16, brassMat, 0, 0.72, 0.15);
-addCylinder(0.12, 0.12, 0.42, 14, metalMat, 0, 0.98, 0.15);
-addMesh(new THREE.TorusGeometry(0.26, 0.05, 10, 24), brassMat, 0, 1.12, 0.15, Math.PI / 2, 0, 0);
+// кормовые перила
+const sternPtsLeft = [
+  { x: -2.7, z: 8.8 },
+  { x: -3.0, z: 10.0 },
+  { x: -2.9, z: 11.8 }
+];
+const sternPtsRight = [
+  { x:  2.7, z: 8.8 },
+  { x:  3.0, z: 10.0 },
+  { x:  2.9, z: 11.8 }
+];
 
-// боковые лежаки/тюки/ящики
-for (const z of [-5.7, -4.2, -2.7, -1.2, 0.3, 1.8, 3.3, 4.8, 6.3]) {
-  addSideBundle(-1, z, -0.12);
-  addSideBundle( 1, z,  0.12);
+for (const p of sternPtsLeft) addRailPost(p.x, p.z, 1.02);
+for (const p of sternPtsRight) addRailPost(p.x, p.z, 1.02);
+
+for (let i = 0; i < sternPtsLeft.length - 1; i++) {
+  addRailSegment(
+    sternPtsLeft[i].x, sternPtsLeft[i].z,
+    sternPtsLeft[i + 1].x, sternPtsLeft[i + 1].z,
+    1.10
+  );
+  addRailSegment(
+    sternPtsRight[i].x, sternPtsRight[i].z,
+    sternPtsRight[i + 1].x, sternPtsRight[i + 1].z,
+    1.10
+  );
 }
 
-// капитанская зона
-addPlane(1.5, 1.9, new THREE.MeshStandardMaterial({ color: 0x3c6477 }), -1.05, 0.475, 5.55);
-addPlane(1.5, 1.9, new THREE.MeshStandardMaterial({ color: 0x3c6477 }),  1.05, 0.475, 5.55);
-addPlane(0.8, 1.9, purpleFabricMat, 0, 0.476, 5.55);
+addRailSegment(-2.9, 11.8, 2.9, 11.8, 1.10);
 
-addCylinder(0.52, 0.62, 0.24, 18, brassMat, 0, 0.62, 5.2);
-addMesh(new THREE.SphereGeometry(0.28, 16, 16), new THREE.MeshBasicMaterial({ color: 0x6dff8b }), 0, 0.86, 5.2);
-addChair(0, 6.15, Math.PI);
+// ---------- боковые перила по палубе ----------
+const railPointsLeft = [];
+const railPointsRight = [];
 
-// лестница к корме
-addSteps(7.2, 4, 1);
-
-// кормовая зона отдыха / карта
-addPlane(1.25, 3.0, purpleFabricMat, 0, 0.476, 9.1);
-addPlane(2.4, 1.3, new THREE.MeshStandardMaterial({ color: 0x6f5e2f }), 0, 0.477, 10.1);
-
-addBox(2.7, 0.18, 1.4, darkWoodMat, 0, 0.64, 10.0);
-addPlane(2.2, 0.9, new THREE.MeshStandardMaterial({ color: 0xd8c9a8 }), 0, 0.735, 10.0);
-
-addChair(-1.05,  9.45,  0.2);
-addChair( 1.05,  9.45, -0.2);
-addChair(-0.95, 10.75, Math.PI - 0.2);
-addChair( 0.95, 10.75, Math.PI + 0.2);
-
-// книги/ящики по бокам кормы
-addBox(0.45, 0.52, 1.6, darkWoodMat, -2.4, 0.72, 9.2);
-addBox(0.45, 0.52, 1.6, darkWoodMat,  2.4, 0.72, 9.2);
-
-// фонари
-for (const p of [
-  [-2.2, -2.2], [2.2, -2.2],
-  [-2.4,  4.4], [2.4,  4.4],
-  [-2.2,  8.2], [2.2,  8.2]
-]) {
-  addLamp(p[0], p[1]);
+for (let z = -8.5; z <= 8.5; z += 1.7) {
+  const x = halfWidthAt(z) - 0.30;
+  railPointsLeft.push({ x: -x, z });
+  railPointsRight.push({ x: x, z });
 }
 
-// носовой бушприт / декоративная стойка
-addBox(0.10, 2.2, 0.10, railMat, 0, 1.45, -10.8, -0.12, 0, 0);
-addMesh(new THREE.TorusGeometry(0.22, 0.03, 8, 20), brassMat, 0, 1.25, -10.2, Math.PI / 2, 0, 0);
+for (const p of railPointsLeft) addRailPost(p.x, p.z, 0.96);
+for (const p of railPointsRight) addRailPost(p.x, p.z, 0.96);
 
+for (let i = 0; i < railPointsLeft.length - 1; i++) {
+  addRailSegment(
+    railPointsLeft[i].x, railPointsLeft[i].z,
+    railPointsLeft[i + 1].x, railPointsLeft[i + 1].z,
+    1.04
+  );
+  addRailSegment(
+    railPointsRight[i].x, railPointsRight[i].z,
+    railPointsRight[i + 1].x, railPointsRight[i + 1].z,
+    1.04
+  );
+}
+
+// ---------- декоративные стойки / опоры ----------
+for (const z of [-8.0, -4.0, 0.0, 4.0, 8.0]) {
+  const x = halfWidthAt(z) - 0.12;
+  addBox(0.10, 0.60, 0.10, railMat, -x, 0.68, z);
+  addBox(0.10, 0.60, 0.10, railMat,  x, 0.68, z);
+}
+
+// ---------- корабль уже ориентирован носом вперед ----------
 scene.add(ship);
 
 // =====================
