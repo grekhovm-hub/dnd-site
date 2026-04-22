@@ -849,17 +849,6 @@ document.getElementById("addToken").onclick = () => {
 const raycaster = new THREE.Raycaster();
 const mouse = new THREE.Vector2();
 
-function getTokenRoot(object) {
-  let obj = object;
-
-  while (obj) {
-    if (obj.userData && obj.userData.isToken) return obj;
-    obj = obj.parent;
-  }
-
-  return null;
-}
-
 renderer.domElement.addEventListener("pointermove", (e) => {
   if (!selected) return;
 
