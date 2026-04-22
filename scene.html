@@ -34,6 +34,7 @@ body {
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/STLLoader.js"></script>
 
 <script>
 // =====================
@@ -95,495 +96,67 @@ scene.add(light);
 // КОРАБЛЬ
 // =====================
 // =====================
-// КОРАБЛЬ — ОБЪЕМНЫЙ КОРПУС
+// КОРАБЛЬ ИЗ STL
 // =====================
 const ship = new THREE.Group();
-
-// ---------- материалы ----------
-const hullMat = new THREE.MeshStandardMaterial({
-  color: 0x4a2d1c,
-  roughness: 0.95
-});
-
-const hullDarkMat = new THREE.MeshStandardMaterial({
-  color: 0x2f1b12,
-  roughness: 0.98
-});
-
-const deckWoodMat = new THREE.MeshStandardMaterial({
-  color: 0xa56b3f,
-  roughness: 0.96
-});
-
-const railMat = new THREE.MeshStandardMaterial({
-  color: 0x5b3723,
-  roughness: 0.95
-});
-
-const trimMat = new THREE.MeshStandardMaterial({
-  color: 0x7a4c2d,
-  roughness: 0.93
-});
-
-const metalMat = new THREE.MeshStandardMaterial({
-  color: 0x626872,
-  roughness: 0.7,
-  metalness: 0.5
-});
-
-const brassMat = new THREE.MeshStandardMaterial({
-  color: 0xb38a42,
-  roughness: 0.45,
-  metalness: 0.85
-});
-
-// ---------- текстура палубы ----------
-function createDeckTexture() {
-  const canvas = document.createElement("canvas");
-  canvas.width = 1024;
-  canvas.height = 2048;
-  const ctx = canvas.getContext("2d");
-
-  ctx.fillStyle = "#9e663b";
-  ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-  let x = 0;
-  while (x < canvas.width) {
-    const w = 20 + Math.random() * 18;
-    const tone = 105 + Math.floor(Math.random() * 35);
-
-    ctx.fillStyle = `rgb(${tone + 28}, ${tone}, ${Math.max(40, tone - 35)})`;
-    ctx.fillRect(x, 0, w, canvas.height);
-
-    ctx.fillStyle = "rgba(50,28,14,0.28)";
-    ctx.fillRect(x + w - 2, 0, 2, canvas.height);
-
-    for (let y = 40; y < canvas.height; y += 140 + Math.random() * 90) {
-      ctx.fillStyle = "rgba(45,26,13,0.22)";
-      ctx.fillRect(x + 2, y, Math.max(4, w - 4), 2);
-    }
-
-    x += w;
-  }
-
-  for (let i = 0; i < 1400; i++) {
-    const xx = Math.random() * canvas.width;
-    const yy = Math.random() * canvas.height;
-    const len = 4 + Math.random() * 14;
-
-    ctx.strokeStyle = `rgba(255,255,255,${0.01 + Math.random() * 0.02})`;
-    ctx.beginPath();
-    ctx.moveTo(xx, yy);
-    ctx.lineTo(xx + len, yy + (Math.random() - 0.5) * 4);
-    ctx.stroke();
-  }
-
-  const tex = new THREE.CanvasTexture(canvas);
-  tex.colorSpace = THREE.SRGBColorSpace;
-  tex.anisotropy = renderer.capabilities.getMaxAnisotropy();
-  return tex;
-}
-
-const deckTexture = createDeckTexture();
-
-const deckMat = new THREE.MeshStandardMaterial({
-  map: deckTexture,
-  color: 0xffffff,
-  roughness: 0.97
-});
-
-// ---------- форма корабля ----------
-function createShipShape(scale = 1) {
-  const s = new THREE.Shape();
-
-  // нос в -Z, корма в +Z
-  s.moveTo(0, -13.5 * scale);
-
-  s.bezierCurveTo(
-    1.4 * scale, -13.1 * scale,
-    3.6 * scale, -10.0 * scale,
-    4.3 * scale, -6.2 * scale
-  );
-
-  s.bezierCurveTo(
-    4.9 * scale, -2.4 * scale,
-    4.8 * scale, 4.5 * scale,
-    4.1 * scale, 8.6 * scale
-  );
-
-  s.quadraticCurveTo(
-    3.8 * scale, 10.5 * scale,
-    3.2 * scale, 11.7 * scale
-  );
-
-  // плоская корма
-  s.lineTo(2.8 * scale, 12.8 * scale);
-  s.lineTo(-2.8 * scale, 12.8 * scale);
-
-  s.quadraticCurveTo(
-    -3.8 * scale, 10.5 * scale,
-    -4.1 * scale, 8.6 * scale
-  );
-
-  s.bezierCurveTo(
-    -4.8 * scale, 4.5 * scale,
-    -4.9 * scale, -2.4 * scale,
-    -4.3 * scale, -6.2 * scale
-  );
-
-  s.bezierCurveTo(
-    -3.6 * scale, -10.0 * scale,
-    -1.4 * scale, -13.1 * scale,
-    0, -13.5 * scale
-  );
-
-  return s;
-}
-
-function makeExtruded(shape, depth) {
-  const geom = new THREE.ExtrudeGeometry(shape, {
-    depth,
-    bevelEnabled: false,
-    curveSegments: 64
-  });
-  geom.rotateX(-Math.PI / 2);
-  return geom;
-}
-
-function addBox(w, h, d, mat, x, y, z, rx = 0, ry = 0, rz = 0) {
-  const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat);
-  m.position.set(x, y, z);
-  m.rotation.set(rx, ry, rz);
-  ship.add(m);
-  return m;
-}
-
-function addCylinder(rt, rb, h, seg, mat, x, y, z, rx = 0, ry = 0, rz = 0) {
-  const m = new THREE.Mesh(new THREE.CylinderGeometry(rt, rb, h, seg), mat);
-  m.position.set(x, y, z);
-  m.rotation.set(rx, ry, rz);
-  ship.add(m);
-  return m;
-}
-
-function addRailPost(x, z, y = 0.95) {
-  addBox(0.08, 0.38, 0.08, railMat, x, y, z);
-}
-
-function addRailSegment(x1, z1, x2, z2, y) {
-  const dx = x2 - x1;
-  const dz = z2 - z1;
-  const len = Math.sqrt(dx * dx + dz * dz);
-
-  const rail = new THREE.Mesh(
-    new THREE.BoxGeometry(0.08, 0.08, len),
-    railMat
-  );
-
-  rail.position.set((x1 + x2) / 2, y, (z1 + z2) / 2);
-  rail.rotation.y = Math.atan2(dx, dz);
-  ship.add(rail);
-}
-
-function addStepRun(centerZ, steps, dir = 1, startY = 0.52) {
-  for (let i = 0; i < steps; i++) {
-    addBox(
-      1.8 - i * 0.16,
-      0.08,
-      0.30,
-      trimMat,
-      0,
-      startY + i * 0.07,
-      centerZ + i * 0.28 * dir
-    );
-  }
-}
-
-function halfWidthAt(z) {
-  if (z < -12) return 0.7;
-  if (z < -9)  return THREE.MathUtils.lerp(1.0, 2.8, (z + 12) / 3);
-  if (z < -5)  return THREE.MathUtils.lerp(2.8, 4.0, (z + 9) / 4);
-  if (z < 5)   return 4.15;
-  if (z < 9)   return THREE.MathUtils.lerp(4.15, 3.5, (z - 5) / 4);
-  if (z < 12.4) return THREE.MathUtils.lerp(3.5, 2.7, (z - 9) / 3.4);
-  return 2.5;
-}
-
-function railHalfWidthAt(z) {
-  if (z < -12.3 || z > 12.2) return 0;
-  return Math.max(0, halfWidthAt(z) - 0.30);
-}
-
-function deckHalfWidthAt(z) {
-  if (z < -12.3 || z > 12.2) return 0;
-  return Math.max(0, railHalfWidthAt(z) - 0.02);
-}
-
-function walkableHalfWidthAt(z) {
-  if (z < -12.3 || z > 12.2) return 0;
-  return Math.max(0, deckHalfWidthAt(z) - 0.18);
-}
-
-function isInsideWalkableDeck(x, z) {
-  const hw = walkableHalfWidthAt(z);
-  return hw > 0 && Math.abs(x) <= hw;
-}
-
-function createDeckShapeFromHalfWidth(widthFn) {
-  const zVals = [-12.0, -11.0, -9.0, -7.0, -5.0, -2.0, 1.0, 4.0, 6.5, 8.8, 10.5, 11.7];
-
-  const right = zVals.map(z => ({
-    x: widthFn(z),
-    z
-  }));
-
-  const shape = new THREE.Shape();
-
-  shape.moveTo(0, -12.5);
-
-  shape.quadraticCurveTo(
-    right[0].x * 0.45, -12.35,
-    right[0].x, right[0].z
-  );
-
-  for (let i = 1; i < right.length; i++) {
-    shape.lineTo(right[i].x, right[i].z);
-  }
-
-  shape.lineTo(-right[right.length - 1].x, right[right.length - 1].z);
-
-  for (let i = right.length - 2; i >= 0; i--) {
-    shape.lineTo(-right[i].x, right[i].z);
-  }
-
-  shape.quadraticCurveTo(
-    -right[0].x * 0.45, -12.35,
-    0, -12.5
-  );
-
-  shape.closePath();
-  return shape;
-} 
-  
-function createDeckEdgeShape(railOffset = 0.05) {
-  const zVals = [-12.2, -11.0, -9.0, -7.0, -5.0, -2.0, 1.0, 4.0, 6.5, 8.8, 10.5, 11.8, 12.3];
-
-  const right = zVals.map(z => ({
-    x: halfWidthAt(z) - 0.30 + railOffset,
-    z
-  }));
-
-  const left = [...right].reverse().map(p => ({
-    x: -p.x,
-    z: p.z
-  }));
-
-  const shape = new THREE.Shape();
-
-  // нос
-  shape.moveTo(0, -12.9);
-
-  // правая сторона
-  shape.quadraticCurveTo(
-    right[0].x * 0.45, -12.75,
-    right[0].x, right[0].z
-  );
-
-  for (let i = 1; i < right.length; i++) {
-    shape.lineTo(right[i].x, right[i].z);
-  }
-
-  // плоская корма
-  shape.lineTo(-right[right.length - 1].x, right[right.length - 1].z);
-
-  // левая сторона
-  for (let i = 0; i < left.length; i++) {
-    shape.lineTo(left[i].x, left[i].z);
-  }
-
-  // обратно в нос
-  shape.quadraticCurveTo(
-    -right[0].x * 0.45, -12.75,
-    0, -12.9
-  );
-
-  shape.closePath();
-  return shape;
-}  
-  
-// ---------- нижний корпус ----------
-const hullOuter = new THREE.Mesh(
-  makeExtruded(createShipShape(1.06), 0.95),
-  hullMat
-);
-hullOuter.position.y = -0.58;
-ship.add(hullOuter);
-
-const hullMid = new THREE.Mesh(
-  makeExtruded(createShipShape(0.92), 0.85),
-  hullDarkMat
-);
-hullMid.position.y = -1.08;
-ship.add(hullMid);
-
-const keel = new THREE.Mesh(
-  makeExtruded(createShipShape(0.55), 0.70),
-  hullDarkMat
-);
-keel.position.y = -1.55;
-ship.add(keel);
-
-// ---------- палуба ----------
-// ---------- палуба по линии перил ----------
-const deckShape = createDeckShapeFromHalfWidth(deckHalfWidthAt);
-
-const deckGeom = new THREE.ShapeGeometry(deckShape, 64);
-deckGeom.rotateX(-Math.PI / 2);
-
-const deck = new THREE.Mesh(deckGeom, deckMat);
-deck.position.y = 0.39;
-ship.add(deck);
-
-// тонкая кромка под палубой
-const deckLip = new THREE.Mesh(
-  makeExtruded(createDeckShapeFromHalfWidth(deckHalfWidthAt), 0.10),
-  trimMat
-);
-deckLip.position.y = 0.29;
-ship.add(deckLip);
-
-// центральная дорожка
-const centerStrip = new THREE.Mesh(
-  new THREE.PlaneGeometry(0.95, 18.0),
-  new THREE.MeshStandardMaterial({
-    color: 0x7d4f2d,
-    transparent: true,
-    opacity: 0.22,
-    roughness: 1
-  })
-);
-centerStrip.rotation.x = -Math.PI / 2;
-centerStrip.position.set(0, 0.395, 0.8);
-ship.add(centerStrip);
-
-// ---------- носовая площадка ----------
-addBox(2.8, 0.22, 4.2, trimMat, 0, 0.63, -9.0);
-addStepRun(-7.8, 4, -1, 0.48);
-
-// носовые перила
-const bowRailPts = [
-  { x: -1.15, z: -11.0 },
-  { x: -0.85, z: -12.0 },
-  { x:  0.00, z: -12.6 },
-  { x:  0.85, z: -12.0 },
-  { x:  1.15, z: -11.0 }
-];
-
-for (const p of bowRailPts) addRailPost(p.x, p.z, 1.00);
-for (let i = 0; i < bowRailPts.length - 1; i++) {
-  addRailSegment(
-    bowRailPts[i].x, bowRailPts[i].z,
-    bowRailPts[i + 1].x, bowRailPts[i + 1].z,
-    1.08
-  );
-}
-
-// бушприт
-addCylinder(0.05, 0.08, 2.8, 10, railMat, 0, 0.92, -13.9, Math.PI / 2, 0, 0);
-
-// ---------- центральная палубная зона ----------
-addBox(1.9, 0.18, 2.6, trimMat, 0, 0.50, -1.0);
-addBox(1.0, 0.28, 1.4, metalMat, 0, 0.64, 0.2);
-
-addCylinder(0.25, 0.30, 0.36, 16, brassMat, 0, 0.70, 0.2);
-addCylinder(0.10, 0.10, 0.30, 12, metalMat, 0, 0.95, 0.2);
-
-// боковые блоки/ящики
-for (const z of [-4.8, -3.0, -1.2, 1.0, 3.2, 5.4]) {
-  const x = Math.abs(z) > 4 ? 3.25 : 3.65;
-  addBox(0.85, 0.22, 0.75, railMat, -x, 0.56, z, 0, 0, -0.14);
-  addBox(0.85, 0.22, 0.75, railMat,  x, 0.56, z, 0, 0,  0.14);
-}
-
-// ---------- кормовая надстройка ----------
-addBox(5.2, 0.26, 3.6, trimMat, 0, 0.72, 10.0);
-
-// стены кормовой надстройки
-addBox(5.2, 1.55, 0.18, hullMat, 0, 1.52, 11.7);
-addBox(0.18, 1.25, 2.8, hullMat, -2.5, 1.38, 10.2);
-addBox(0.18, 1.25, 2.8, hullMat,  2.5, 1.38, 10.2);
-
-// внутренняя верхняя площадка
-addBox(3.0, 0.18, 2.2, deckWoodMat, 0, 1.28, 10.2);
-
-// лестница на корму
-addStepRun(7.9, 5, 1, 0.48);
-
-// кормовые перила
-const sternPtsLeft = [
-  { x: -2.7, z: 8.8 },
-  { x: -3.0, z: 10.0 },
-  { x: -2.9, z: 11.8 }
-];
-const sternPtsRight = [
-  { x:  2.7, z: 8.8 },
-  { x:  3.0, z: 10.0 },
-  { x:  2.9, z: 11.8 }
-];
-
-for (const p of sternPtsLeft) addRailPost(p.x, p.z, 1.02);
-for (const p of sternPtsRight) addRailPost(p.x, p.z, 1.02);
-
-for (let i = 0; i < sternPtsLeft.length - 1; i++) {
-  addRailSegment(
-    sternPtsLeft[i].x, sternPtsLeft[i].z,
-    sternPtsLeft[i + 1].x, sternPtsLeft[i + 1].z,
-    1.10
-  );
-  addRailSegment(
-    sternPtsRight[i].x, sternPtsRight[i].z,
-    sternPtsRight[i + 1].x, sternPtsRight[i + 1].z,
-    1.10
-  );
-}
-
-addRailSegment(-2.9, 11.8, 2.9, 11.8, 1.10);
-
-// ---------- боковые перила по палубе ----------
-const railPointsLeft = [];
-const railPointsRight = [];
-
-for (let z = -8.5; z <= 8.5; z += 1.7) {
-  const x = railHalfWidthAt(z);
-  railPointsLeft.push({ x: -x, z });
-  railPointsRight.push({ x: x, z });
-}
-
-for (const p of railPointsLeft) addRailPost(p.x, p.z, 0.96);
-for (const p of railPointsRight) addRailPost(p.x, p.z, 0.96);
-
-for (let i = 0; i < railPointsLeft.length - 1; i++) {
-  addRailSegment(
-    railPointsLeft[i].x, railPointsLeft[i].z,
-    railPointsLeft[i + 1].x, railPointsLeft[i + 1].z,
-    1.04
-  );
-  addRailSegment(
-    railPointsRight[i].x, railPointsRight[i].z,
-    railPointsRight[i + 1].x, railPointsRight[i + 1].z,
-    1.04
-  );
-}
-
-// ---------- декоративные стойки / опоры ----------
-for (const z of [-8.0, -4.0, 0.0, 4.0, 8.0]) {
-  const x = halfWidthAt(z) - 0.12;
-  addBox(0.10, 0.60, 0.10, railMat, -x, 0.68, z);
-  addBox(0.10, 0.60, 0.10, railMat,  x, 0.68, z);
-}
-
-// ---------- корабль уже ориентирован носом вперед ----------
 scene.add(ship);
+
+const shipMaterial = new THREE.MeshStandardMaterial({
+  color: 0x6b4328,
+  roughness: 0.88,
+  metalness: 0.08
+});
+
+const stlLoader = new THREE.STLLoader();
+
+stlLoader.load(
+  "Simple_Airship.stl",
+  (geometry) => {
+    geometry.computeVertexNormals();
+    geometry.center();
+
+    const mesh = new THREE.Mesh(geometry, shipMaterial);
+
+    // STL от моделей для печати обычно не в той ориентации,
+    // которая нужна сцене Three.js
+    mesh.rotation.x = -Math.PI / 2;
+    mesh.rotation.z =  Math.PI / 2;
+
+    ship.add(mesh);
+
+    // Подгоняем размер под твою сцену
+    const box = new THREE.Box3().setFromObject(mesh);
+    const size = new THREE.Vector3();
+    box.getSize(size);
+
+    const currentLength = Math.max(size.x, size.z);
+    const targetLength = 26; // длина корабля в твоей сцене
+    const scale = targetLength / currentLength;
+
+    mesh.scale.setScalar(scale);
+
+    // После масштабирования пересчитываем bbox
+    const box2 = new THREE.Box3().setFromObject(mesh);
+    const center = new THREE.Vector3();
+    box2.getCenter(center);
+
+    // Центруем модель в сцене
+    mesh.position.x -= center.x;
+    mesh.position.z -= center.z;
+
+    // Ставим ее примерно на уровень палубы/поля
+    mesh.position.y -= box2.min.y;
+    mesh.position.y -= 0.35;
+
+    // Если корабль окажется развернут задом наперед —
+    // просто раскомментируй следующую строку:
+    // mesh.rotation.y += Math.PI;
+  },
+  undefined,
+  (error) => {
+    console.error("Ошибка загрузки STL:", error);
+  }
+);
 
 // =====================
 // ОБЛАКА И ВЕТЕР
