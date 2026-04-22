@@ -16,12 +16,49 @@ body {
   bottom: 20px;
   left: 20px;
   z-index: 10;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+#characterButtons {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+#addToken,
+.charBtn {
+  border: none;
+  border-radius: 10px;
+  background: rgba(12, 24, 48, 0.9);
+  color: white;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.35);
 }
 
 #addToken {
+  width: 52px;
   font-size: 24px;
-  padding: 10px 15px;
-  cursor: pointer;
+  padding: 10px 0;
+  text-align: center;
+}
+
+.charBtn {
+  min-width: 140px;
+  font-size: 16px;
+  padding: 10px 14px;
+  text-align: left;
+}
+
+#addToken:hover,
+.charBtn:hover {
+  background: rgba(26, 44, 80, 0.98);
+}
+
+.charBtn:disabled {
+  opacity: 0.45;
+  cursor: default;
 }
 </style>
 </head>
@@ -30,6 +67,14 @@ body {
 
 <div id="ui">
   <button id="addToken">+</button>
+
+  <div id="characterButtons">
+    <button class="charBtn" data-character="golt">Гольт</button>
+    <button class="charBtn" data-character="dinen">Динен</button>
+    <button class="charBtn" data-character="solas">Солас</button>
+    <button class="charBtn" data-character="seivet">Сэйвет</button>
+    <button class="charBtn" data-character="ace">Эйс</button>
+  </div>
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
@@ -115,6 +160,47 @@ const shipMaterial = new THREE.MeshStandardMaterial({
 });
 
 const stlLoader = new THREE.STLLoader();
+  const CHARACTER_DEFS = {
+  golt:   { id: "golt",   name: "Гольт",  file: "golt.stl",   color: 0xc8b07a, rotationY: 0 },
+  dinen:  { id: "dinen",  name: "Динен",  file: "dinen.stl",  color: 0x9fc5e8, rotationY: 0 },
+  solas:  { id: "solas",  name: "Солас",  file: "solas.stl",  color: 0xb6d7a8, rotationY: 0 },
+  seivet: { id: "seivet", name: "Сэйвет", file: "seivet.stl", color: 0xd5a6bd, rotationY: 0 },
+  ace:    { id: "ace",    name: "Эйс",    file: "ace.stl",    color: 0xf6b26b, rotationY: 0 }
+};
+
+const characterGeometryCache = {};
+
+function loadCharacterGeometry(fileName) {
+  const cached = characterGeometryCache[fileName];
+
+  if (cached) {
+    return cached.then ? cached : Promise.resolve(cached);
+  }
+
+  const promise = new Promise((resolve, reject) => {
+    stlLoader.load(
+      fileName,
+      (geometry) => {
+        geometry.computeVertexNormals();
+        characterGeometryCache[fileName] = geometry;
+        resolve(geometry);
+      },
+      undefined,
+      (error) => reject(error)
+    );
+  });
+
+  characterGeometryCache[fileName] = promise;
+  return promise;
+}
+
+function preloadCharacterModels() {
+  for (const def of Object.values(CHARACTER_DEFS)) {
+    loadCharacterGeometry(def.file).catch((error) => {
+      console.error(`Ошибка предзагрузки модели ${def.file}:`, error);
+    });
+  }
+}
 
 stlLoader.load(
   "Simple_Airship.stl",
@@ -584,6 +670,89 @@ function createToken(x, y, z) {
   group.updateMatrixWorld(true);
 }
 
+function hasCharacterOnField(characterId) {
+  return tokens.some(token => token.userData.characterId === characterId);
+}
+
+function updateCharacterButtonsState() {
+  document.querySelectorAll(".charBtn").forEach((button) => {
+    const characterId = button.dataset.character;
+    button.disabled = hasCharacterOnField(characterId);
+  });
+}
+
+function buildCharacterMesh(geometry, def) {
+  const mesh = new THREE.Mesh(
+    geometry.clone(),
+    new THREE.MeshStandardMaterial({
+      color: def.color,
+      roughness: 0.78,
+      metalness: 0.08
+    })
+  );
+
+  mesh.rotation.x = -Math.PI / 2;
+  mesh.rotation.y = def.rotationY || 0;
+  mesh.updateMatrixWorld(true);
+
+  const box = new THREE.Box3().setFromObject(mesh);
+  const size = new THREE.Vector3();
+  box.getSize(size);
+
+  const footprint = Math.max(size.x, size.z) || 1;
+  const targetFootprint = GRID_STEP * 0.72;
+  const scale = targetFootprint / footprint;
+
+  mesh.scale.setScalar(scale);
+  mesh.updateMatrixWorld(true);
+
+  const box2 = new THREE.Box3().setFromObject(mesh);
+  const center = new THREE.Vector3();
+  box2.getCenter(center);
+
+  mesh.position.x -= center.x;
+  mesh.position.z -= center.z;
+  mesh.position.y -= box2.min.y;
+
+  return mesh;
+}
+
+async function createCharacterToken(def, x, y, z) {
+  const geometry = await loadCharacterGeometry(def.file);
+
+  const group = new THREE.Group();
+  group.userData.isToken = true;
+  group.userData.characterId = def.id;
+  group.userData.characterName = def.name;
+
+  const base = new THREE.Mesh(
+    new THREE.CylinderGeometry(GRID_STEP * 0.24, GRID_STEP * 0.28, 0.10, 24),
+    new THREE.MeshStandardMaterial({
+      color: 0x202020,
+      roughness: 0.9,
+      metalness: 0.05
+    })
+  );
+  base.position.y = 0.05;
+
+  const model = buildCharacterMesh(geometry, def);
+  model.position.y += 0.10;
+
+  group.add(base);
+  group.add(model);
+  group.position.set(x, y, z);
+
+  enableLayerRecursive(group, LAYER_TOKEN);
+
+  scene.add(group);
+  tokens.push(group);
+  group.updateMatrixWorld(true);
+
+  updateCharacterButtonsState();
+
+  return group;
+}
+  
 // =====================
 // ДОБАВЛЕНИЕ ФИШКИ
 // =====================
@@ -602,6 +771,40 @@ document.getElementById("addToken").onclick = () => {
   );
 };
 
+document.querySelectorAll(".charBtn").forEach((button) => {
+  button.addEventListener("click", async () => {
+    if (gridCells.length === 0) return;
+
+    const characterId = button.dataset.character;
+    const def = CHARACTER_DEFS[characterId];
+
+    if (!def) return;
+    if (hasCharacterOnField(characterId)) return;
+
+    const freeCells = gridCells.filter(cell => !isCellOccupied(cell));
+    if (freeCells.length === 0) return;
+
+    const cell = freeCells[Math.floor(Math.random() * freeCells.length)];
+
+    button.disabled = true;
+
+    try {
+      await createCharacterToken(
+        def,
+        cell.parent.position.x,
+        cell.userData.tokenY,
+        cell.parent.position.z
+      );
+    } catch (error) {
+      console.error(`Ошибка загрузки модели ${def.file}:`, error);
+      button.disabled = false;
+    }
+  });
+});
+
+preloadCharacterModels();
+updateCharacterButtonsState();
+  
 // =====================
 // RAYCAST
 // =====================
