@@ -146,7 +146,6 @@ for(let x=0;x<size;x++){
 // ФИШКИ
 // =====================
 const tokens = [];
-const tokenMeshes = [];
 let selected = null;
 
 function isCellOccupied(cell, ignoreToken = null) {
@@ -189,25 +188,13 @@ const head = new THREE.Mesh(
   head.position.y = 0.8;
 
   group.add(base, body, head);
-  const hitbox = new THREE.Mesh(
-  new THREE.CylinderGeometry(0.6, 0.6, 2, 8),
-  new THREE.MeshBasicMaterial({
-    transparent: true,
-    opacity: 0,
-    depthWrite: false
-  })
-);
 
-hitbox.position.y = 0.8;
-hitbox.userData.token = group;
+group.userData.isToken = true;
+group.position.set(x, 0.51, z);
 
-group.add(hitbox);
-tokenMeshes.push(hitbox);
-
-  group.position.set(x,0.51,z);
-
-  scene.add(group);
-  tokens.push(group);
+scene.add(group);
+tokens.push(group);
+group.updateMatrixWorld(true);
 }
 
 // =====================
@@ -228,18 +215,28 @@ document.getElementById("addToken").onclick = () => {
 const raycaster = new THREE.Raycaster();
 const mouse = new THREE.Vector2();
 
+function getTokenRoot(object) {
+  let obj = object;
+
+  while (obj) {
+    if (obj.userData && obj.userData.isToken) return obj;
+    obj = obj.parent;
+  }
+
+  return null;
+}
+
 renderer.domElement.addEventListener("mousemove", (e) => {
   if (!selected) return;
 
   updateMouseAndRay(e);
+  scene.updateMatrixWorld(true);
 
-  const gridHits = raycaster.intersectObjects(gridCells);
-
+  const gridHits = raycaster.intersectObjects(gridCells, false);
   if (gridHits.length === 0) return;
 
   const cell = gridHits[0].object;
 
-  // не даем таскать фишку на занятую клетку
   if (isCellOccupied(cell, selected)) return;
 
   selected.position.x = cell.position.x;
@@ -250,37 +247,31 @@ renderer.domElement.addEventListener("mousedown", (e) => {
   if (e.button !== 0) return;
 
   updateMouseAndRay(e);
+  scene.updateMatrixWorld(true);
 
-  // Отладочная стрелка — если нужна
-  const helper = new THREE.ArrowHelper(
-    raycaster.ray.direction.clone(),
-    raycaster.ray.origin.clone(),
-    30,
-    0xff0000
-  );
-  scene.add(helper);
-  setTimeout(() => scene.remove(helper), 200);
-
-  // 1. Если фишка еще не выбрана — пробуем выбрать
+  // 1. Если фишка еще не выбрана — пробуем выбрать именно фишку
   if (!selected) {
-    const tokenHits = raycaster.intersectObjects(tokenMeshes, true);
+    const tokenHits = raycaster.intersectObjects(tokens, true);
 
     if (tokenHits.length > 0) {
-      selected = tokenHits[0].object.userData.token;
-      controls.enabled = false;
+      const token = getTokenRoot(tokenHits[0].object);
+
+      if (token) {
+        selected = token;
+        controls.enabled = false;
+      }
     }
 
     return;
   }
 
-  // 2. Если фишка уже выбрана — ставим на клетку
-  const gridHits = raycaster.intersectObjects(gridCells);
+  // 2. Если фишка уже выбрана — ставим ее на клетку
+  const gridHits = raycaster.intersectObjects(gridCells, false);
 
   if (gridHits.length === 0) return;
 
   const cell = gridHits[0].object;
 
-  // нельзя поставить на занятую клетку
   if (isCellOccupied(cell, selected)) return;
 
   selected.position.x = cell.position.x;
