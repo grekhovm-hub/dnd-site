@@ -485,12 +485,13 @@ function rebuildGridFromShip(mesh) {
         }
 
         for (const levelY of acceptedLevels) {
-  if (!cellHasEnoughSupport(mesh, rc, down, normalMatrix, x, z, rayStartY, levelY)) {
-    continue;
-  }
+          if (!cellHasEnoughSupport(mesh, rc, down, normalMatrix, x, z, rayStartY, levelY)) {
+            continue;
+          }
 
-  createGridCell(x, levelY, z);
-}
+          createGridCell(x, levelY, z);
+        }
+      }
 
       xi++;
     }
