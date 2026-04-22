@@ -46,7 +46,7 @@ scene.background = new THREE.Color(0x000814);
 const LAYER_DEFAULT = 0;
 const LAYER_TOKEN = 1;
 const LAYER_GRID = 2;
-const GRID_STEP = 1;
+const GRID_STEP = 0,9;
 const GRID_SURFACE_OFFSET = 0.03;
 const GRID_NORMAL_THRESHOLD = 0.72;
 const GRID_LEVEL_EPSILON = 0.12;
@@ -439,13 +439,15 @@ function rebuildGridFromShip(mesh) {
   const xValues = [];
   const zValues = [];
 
-  for (let x = minX + 0.5; x <= maxX - 0.5; x += GRID_STEP) {
-    xValues.push(x);
-  }
+  const halfStep = GRID_STEP / 2;
 
-  for (let z = minZ + 0.5; z <= maxZ - 0.5; z += GRID_STEP) {
-    zValues.push(z);
-  }
+for (let x = minX + halfStep; x <= maxX - halfStep; x += GRID_STEP) {
+  xValues.push(x);
+}
+
+for (let z = minZ + halfStep; z <= maxZ - halfStep; z += GRID_STEP) {
+  zValues.push(z);
+}
 
   let xi = 0;
 
