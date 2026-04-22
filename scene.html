@@ -129,6 +129,152 @@ createRail(-5);
 scene.add(ship);
 
 // =====================
+// ОБЛАКА И ВЕТЕР
+// =====================
+const clock = new THREE.Clock();
+
+const cloudLayer = new THREE.Group();
+const windLayer = new THREE.Group();
+scene.add(cloudLayer);
+scene.add(windLayer);
+
+const clouds = [];
+const windStreaks = [];
+
+// мягкая текстура облака
+function createCloudTexture() {
+  const size = 128;
+  const canvas = document.createElement("canvas");
+  canvas.width = size;
+  canvas.height = size;
+
+  const ctx = canvas.getContext("2d");
+  const g = ctx.createRadialGradient(
+    size / 2, size / 2, 10,
+    size / 2, size / 2, size / 2
+  );
+
+  g.addColorStop(0.0, "rgba(255,255,255,0.95)");
+  g.addColorStop(0.35, "rgba(255,255,255,0.65)");
+  g.addColorStop(0.7, "rgba(220,235,255,0.25)");
+  g.addColorStop(1.0, "rgba(255,255,255,0.0)");
+
+  ctx.fillStyle = g;
+  ctx.fillRect(0, 0, size, size);
+
+  const texture = new THREE.CanvasTexture(canvas);
+  return texture;
+}
+
+// текстура полосы ветра
+function createWindTexture() {
+  const w = 128;
+  const h = 32;
+  const canvas = document.createElement("canvas");
+  canvas.width = w;
+  canvas.height = h;
+
+  const ctx = canvas.getContext("2d");
+  const g = ctx.createLinearGradient(0, 0, w, 0);
+
+  g.addColorStop(0.0, "rgba(255,255,255,0.0)");
+  g.addColorStop(0.5, "rgba(255,255,255,0.9)");
+  g.addColorStop(1.0, "rgba(255,255,255,0.0)");
+
+  ctx.fillStyle = g;
+  ctx.fillRect(0, 0, w, h);
+
+  const texture = new THREE.CanvasTexture(canvas);
+  return texture;
+}
+
+const cloudTexture = createCloudTexture();
+const windTexture = createWindTexture();
+
+function resetCloud(cloud, spawnAhead = false) {
+  cloud.position.x = THREE.MathUtils.randFloatSpread(30);
+  cloud.position.y = THREE.MathUtils.randFloat(5, 14);
+  cloud.position.z = spawnAhead
+    ? THREE.MathUtils.randFloat(-140, -70)
+    : THREE.MathUtils.randFloat(-120, 80);
+
+  cloud.userData.speed = THREE.MathUtils.randFloat(0.03, 0.08);
+  cloud.userData.spin = THREE.MathUtils.randFloat(-0.0015, 0.0015);
+}
+
+function createCloud() {
+  const group = new THREE.Group();
+
+  const puffCount = THREE.MathUtils.randInt(5, 9);
+
+  for (let i = 0; i < puffCount; i++) {
+    const material = new THREE.SpriteMaterial({
+      map: cloudTexture,
+      transparent: true,
+      opacity: THREE.MathUtils.randFloat(0.18, 0.42),
+      depthWrite: false
+    });
+
+    const sprite = new THREE.Sprite(material);
+
+    const s = THREE.MathUtils.randFloat(4, 8);
+    sprite.scale.set(s, s * 0.65, 1);
+
+    sprite.position.set(
+      THREE.MathUtils.randFloatSpread(6),
+      THREE.MathUtils.randFloat(-1.2, 1.2),
+      THREE.MathUtils.randFloatSpread(4)
+    );
+
+    group.add(sprite);
+  }
+
+  resetCloud(group, false);
+  cloudLayer.add(group);
+  clouds.push(group);
+}
+
+function resetWindStreak(streak, spawnAhead = false) {
+  streak.position.x = THREE.MathUtils.randFloatSpread(18);
+  streak.position.y = THREE.MathUtils.randFloat(1.5, 9);
+  streak.position.z = spawnAhead
+    ? THREE.MathUtils.randFloat(-35, -10)
+    : THREE.MathUtils.randFloat(-30, 25);
+
+  const len = THREE.MathUtils.randFloat(1.2, 3.5);
+  streak.scale.set(len, 0.08, 1);
+
+  streak.material.opacity = THREE.MathUtils.randFloat(0.08, 0.22);
+  streak.userData.speed = THREE.MathUtils.randFloat(0.35, 0.9);
+}
+
+function createWindStreak() {
+  const material = new THREE.SpriteMaterial({
+    map: windTexture,
+    transparent: true,
+    opacity: 0.15,
+    depthWrite: false,
+    blending: THREE.AdditiveBlending
+  });
+
+  const streak = new THREE.Sprite(material);
+  resetWindStreak(streak, false);
+
+  windLayer.add(streak);
+  windStreaks.push(streak);
+}
+
+// создаем облака
+for (let i = 0; i < 24; i++) {
+  createCloud();
+}
+
+// создаем полосы ветра
+for (let i = 0; i < 45; i++) {
+  createWindStreak();
+}
+  
+// =====================
 // СЕТКА
 // =====================
 const gridCells = [];
@@ -337,6 +483,35 @@ renderer.domElement.addEventListener("pointerdown", (e) => {
 // =====================
 function animate() {
   requestAnimationFrame(animate);
+
+  const t = clock.getElapsedTime();
+
+  // движение облаков:
+  // корабль как будто летит вперед (в сторону -Z),
+  // поэтому облака медленно уходят назад (+Z)
+  for (const cloud of clouds) {
+    cloud.position.z += cloud.userData.speed;
+    cloud.rotation.y += cloud.userData.spin;
+
+    if (cloud.position.z > 90) {
+      resetCloud(cloud, true);
+    }
+  }
+
+  // ветер летит быстрее облаков
+  for (const streak of windStreaks) {
+    streak.position.z += streak.userData.speed;
+
+    if (streak.position.z > 30) {
+      resetWindStreak(streak, true);
+    }
+  }
+
+  // легкая качка корабля
+  ship.rotation.z = Math.sin(t * 0.9) * 0.018;
+  ship.rotation.x = Math.sin(t * 0.6) * 0.01;
+  ship.position.y = Math.sin(t * 1.2) * 0.12;
+
   renderer.render(scene, camera);
 }
 animate();
