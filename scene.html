@@ -46,9 +46,9 @@ const LAYER_DEFAULT = 0;
 const LAYER_TOKEN = 1;
 const LAYER_GRID = 2;
 
-function setLayerRecursive(obj, layer) {
-  obj.layers.set(layer);
-  obj.traverse(child => child.layers.set(layer));
+function enableLayerRecursive(obj, layer) {
+  obj.layers.enable(layer);
+  obj.traverse(child => child.layers.enable(layer));
 }
 
 // =====================
@@ -154,7 +154,7 @@ for (let x = 0; x < size; x++) {
 
     if (dx * dx + dz * dz > 1) continue;
 
-cell.layers.set(LAYER_GRID);
+cell.layers.enable(LAYER_GRID);
 scene.add(cell);
 gridCells.push(cell);
   }
@@ -227,7 +227,7 @@ function createToken(x, z) {
   group.add(base, body, head);
 group.position.set(x, 0.51, z);
 
-setLayerRecursive(group, LAYER_TOKEN);
+enableLayerRecursive(group, LAYER_TOKEN);
 
 scene.add(group);
 tokens.push(group);
