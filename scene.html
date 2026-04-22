@@ -309,6 +309,52 @@ function halfWidthAt(z) {
   return 2.5;
 }
 
+function createDeckEdgeShape(railOffset = 0.05) {
+  const zVals = [-12.2, -11.0, -9.0, -7.0, -5.0, -2.0, 1.0, 4.0, 6.5, 8.8, 10.5, 11.8, 12.3];
+
+  const right = zVals.map(z => ({
+    x: halfWidthAt(z) - 0.30 + railOffset,
+    z
+  }));
+
+  const left = [...right].reverse().map(p => ({
+    x: -p.x,
+    z: p.z
+  }));
+
+  const shape = new THREE.Shape();
+
+  // нос
+  shape.moveTo(0, -12.9);
+
+  // правая сторона
+  shape.quadraticCurveTo(
+    right[0].x * 0.45, -12.75,
+    right[0].x, right[0].z
+  );
+
+  for (let i = 1; i < right.length; i++) {
+    shape.lineTo(right[i].x, right[i].z);
+  }
+
+  // плоская корма
+  shape.lineTo(-right[right.length - 1].x, right[right.length - 1].z);
+
+  // левая сторона
+  for (let i = 0; i < left.length; i++) {
+    shape.lineTo(left[i].x, left[i].z);
+  }
+
+  // обратно в нос
+  shape.quadraticCurveTo(
+    -right[0].x * 0.45, -12.75,
+    0, -12.9
+  );
+
+  shape.closePath();
+  return shape;
+}  
+  
 // ---------- нижний корпус ----------
 const hullOuter = new THREE.Mesh(
   makeExtruded(createShipShape(1.06), 0.95),
@@ -332,46 +378,37 @@ keel.position.y = -1.55;
 ship.add(keel);
 
 // ---------- палуба ----------
-const deckGeom = new THREE.ShapeGeometry(createShipShape(0.87), 64);
+// ---------- палуба по линии перил ----------
+const deckShape = createDeckEdgeShape(0.05);
+
+const deckGeom = new THREE.ShapeGeometry(deckShape, 64);
 deckGeom.rotateX(-Math.PI / 2);
 
 const deck = new THREE.Mesh(deckGeom, deckMat);
-deck.position.y = 0.38;
+deck.position.y = 0.39;
 ship.add(deck);
 
-// центральная темная дорожка
+// тонкая кромка палубы вниз, чтобы край читался объемно
+const deckLip = new THREE.Mesh(
+  makeExtruded(createDeckEdgeShape(0.02), 0.12),
+  trimMat
+);
+deckLip.position.y = 0.27;
+ship.add(deckLip);
+
+// центральная темная дорожка — чуть уже
 const centerStrip = new THREE.Mesh(
-  new THREE.PlaneGeometry(1.1, 19.0),
+  new THREE.PlaneGeometry(0.95, 18.2),
   new THREE.MeshStandardMaterial({
     color: 0x7d4f2d,
     transparent: true,
-    opacity: 0.28,
+    opacity: 0.24,
     roughness: 1
   })
 );
 centerStrip.rotation.x = -Math.PI / 2;
-centerStrip.position.set(0, 0.385, 0.8);
+centerStrip.position.set(0, 0.395, 0.8);
 ship.add(centerStrip);
-
-// ---------- борта / фальшборт ----------
-const bulwarkShape = createShipShape(1.0);
-const innerHole = new THREE.Path(createShipShape(0.89).getPoints(96));
-bulwarkShape.holes.push(innerHole);
-
-const bulwark = new THREE.Mesh(
-  makeExtruded(bulwarkShape, 0.34),
-  trimMat
-);
-bulwark.position.y = 0.38;
-ship.add(bulwark);
-
-// верхняя кромка борта
-const rim = new THREE.Mesh(
-  makeExtruded(createShipShape(1.01), 0.06),
-  railMat
-);
-rim.position.y = 0.72;
-ship.add(rim);
 
 // ---------- носовая площадка ----------
 addBox(2.8, 0.22, 4.2, trimMat, 0, 0.63, -9.0);
