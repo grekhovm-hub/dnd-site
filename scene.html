@@ -303,6 +303,37 @@ for (let i = 0; i < 24; i++) {
 for (let i = 0; i < 45; i++) {
   createWindStreak();
 }
+
+function walkableHalfWidthAt(z) {
+  if (z < -12.5 || z > 12.5) return 0;
+
+  // нос
+  if (z < -10.0) {
+    return THREE.MathUtils.lerp(0.8, 2.6, (z + 12.5) / 2.5);
+  }
+
+  // расширение к центру
+  if (z < -6.0) {
+    return THREE.MathUtils.lerp(2.6, 3.9, (z + 10.0) / 4.0);
+  }
+
+  // центральная часть
+  if (z < 6.0) {
+    return 3.9;
+  }
+
+  // сужение к корме
+  if (z < 10.0) {
+    return THREE.MathUtils.lerp(3.9, 3.1, (z - 6.0) / 4.0);
+  }
+
+  // корма
+  return THREE.MathUtils.lerp(3.1, 2.4, (z - 10.0) / 2.5);
+}
+
+function isInsideWalkableDeck(x, z) {
+  return Math.abs(x) <= walkableHalfWidthAt(z);
+}
   
 // =====================
 // СЕТКА
