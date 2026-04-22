@@ -46,6 +46,11 @@ scene.background = new THREE.Color(0x000814);
 const LAYER_DEFAULT = 0;
 const LAYER_TOKEN = 1;
 const LAYER_GRID = 2;
+const GRID_STEP = 1;
+const GRID_SURFACE_OFFSET = 0.03;
+const GRID_NORMAL_THRESHOLD = 0.72;
+const GRID_LEVEL_EPSILON = 0.12;
+const TOKEN_Y_OFFSET = 0.105;  
 
 function enableLayerRecursive(obj, layer) {
   obj.layers.enable(layer);
@@ -99,6 +104,7 @@ scene.add(light);
 // КОРАБЛЬ ИЗ STL
 // =====================
 const ship = new THREE.Group();
+let shipMesh = null;
 scene.add(ship);
 
 const shipMaterial = new THREE.MeshStandardMaterial({
@@ -147,6 +153,9 @@ stlLoader.load(
     // Ставим ее примерно на уровень палубы/поля
     mesh.position.y -= box2.min.y;
     mesh.position.y -= 0.35;
+    shipMesh = mesh;
+scene.updateMatrixWorld(true);
+rebuildGridFromShip(shipMesh);
 
     // Если корабль окажется развернут задом наперед —
     // просто раскомментируй следующую строку:
@@ -336,36 +345,125 @@ function isInsideWalkableDeck(x, z) {
 }
   
 // =====================
-// СЕТКА
+// СЕТКА ПО STL-МОДЕЛИ
 // =====================
 const gridCells = [];
-const gridSizeX = 10;
-const gridSizeZ = 26;
 
-for (let x = 0; x < gridSizeX; x++) {
-  for (let z = 0; z < gridSizeZ; z++) {
-    const cell = new THREE.Mesh(
-      new THREE.PlaneGeometry(1, 1),
-      new THREE.MeshBasicMaterial({
-        color: 0x00ff88,
-        transparent: true,
-        opacity: 0.07,
-        side: THREE.DoubleSide
-      })
-    );
-
-    const posX = (x - gridSizeX / 2) + 0.5;
-    const posZ = (z - gridSizeZ / 2) + 0.5;
-
-    cell.rotation.x = -Math.PI / 2;
-    cell.position.set(posX, 0.405, posZ);
-
-    if (!isInsideWalkableDeck(posX, posZ)) continue;
-
-    cell.layers.enable(LAYER_GRID);
-    scene.add(cell);
-    gridCells.push(cell);
+function clearGrid() {
+  for (const cell of gridCells) {
+    if (cell.userData.group) {
+      scene.remove(cell.userData.group);
+    } else {
+      scene.remove(cell);
+    }
   }
+  gridCells.length = 0;
+}
+
+function createGridCell(x, surfaceY, z) {
+  const group = new THREE.Group();
+  group.position.set(x, surfaceY + GRID_SURFACE_OFFSET, z);
+
+  const fill = new THREE.Mesh(
+    new THREE.PlaneGeometry(1, 1),
+    new THREE.MeshBasicMaterial({
+      color: 0x00ff88,
+      transparent: true,
+      opacity: 0.10,
+      side: THREE.DoubleSide,
+      polygonOffset: true,
+      polygonOffsetFactor: -1,
+      polygonOffsetUnits: -2
+    })
+  );
+  fill.rotation.x = -Math.PI / 2;
+  fill.layers.enable(LAYER_GRID);
+
+  const borderGeometry = new THREE.BufferGeometry().setFromPoints([
+    new THREE.Vector3(-0.5, 0, -0.5),
+    new THREE.Vector3( 0.5, 0, -0.5),
+    new THREE.Vector3( 0.5, 0,  0.5),
+    new THREE.Vector3(-0.5, 0,  0.5)
+  ]);
+
+  const border = new THREE.LineLoop(
+    borderGeometry,
+    new THREE.LineBasicMaterial({
+      color: 0x000000,
+      transparent: true,
+      opacity: 0.75
+    })
+  );
+  border.position.y = 0.002;
+
+  group.add(fill);
+  group.add(border);
+  scene.add(group);
+
+  fill.position.set(0, 0, 0);
+  fill.userData.group = group;
+  fill.userData.surfaceY = surfaceY;
+  fill.userData.tokenY = surfaceY + TOKEN_Y_OFFSET;
+
+  gridCells.push(fill);
+}
+
+function rebuildGridFromShip(mesh) {
+  if (!mesh) return;
+
+  clearGrid();
+  scene.updateMatrixWorld(true);
+
+  const box = new THREE.Box3().setFromObject(mesh);
+
+  const minX = Math.floor(box.min.x) - 1;
+  const maxX = Math.ceil(box.max.x) + 1;
+  const minZ = Math.floor(box.min.z) - 1;
+  const maxZ = Math.ceil(box.max.z) + 1;
+  const rayStartY = box.max.y + 10;
+
+  const rc = new THREE.Raycaster();
+  const down = new THREE.Vector3(0, -1, 0);
+  const normalMatrix = new THREE.Matrix3();
+
+  for (let x = minX + 0.5; x <= maxX - 0.5; x += GRID_STEP) {
+    for (let z = minZ + 0.5; z <= maxZ - 0.5; z += GRID_STEP) {
+      rc.set(new THREE.Vector3(x, rayStartY, z), down);
+
+      const hits = rc.intersectObject(mesh, true);
+      if (hits.length === 0) continue;
+
+      const acceptedLevels = [];
+
+      for (const hit of hits) {
+        if (!hit.face) continue;
+
+        normalMatrix.getNormalMatrix(hit.object.matrixWorld);
+        const worldNormal = hit.face.normal
+          .clone()
+          .applyNormalMatrix(normalMatrix)
+          .normalize();
+
+        // берем только почти горизонтальные поверхности, смотрящие вверх
+        if (worldNormal.y < GRID_NORMAL_THRESHOLD) continue;
+
+        const y = hit.point.y;
+
+        const alreadyExists = acceptedLevels.some(
+          existingY => Math.abs(existingY - y) < GRID_LEVEL_EPSILON
+        );
+        if (alreadyExists) continue;
+
+        acceptedLevels.push(y);
+      }
+
+      for (const levelY of acceptedLevels) {
+        createGridCell(x, levelY, z);
+      }
+    }
+  }
+
+  console.log("grid cells:", gridCells.length);
 }
 
 // =====================
@@ -377,8 +475,9 @@ let selected = null;
 function isCellOccupied(cell, ignoreToken = null) {
   return tokens.some(token =>
     token !== ignoreToken &&
-    Math.abs(token.position.x - cell.position.x) < 0.01 &&
-    Math.abs(token.position.z - cell.position.z) < 0.01
+    Math.abs(token.position.x - cell.parent.position.x) < 0.01 &&
+    Math.abs(token.position.z - cell.parent.position.z) < 0.01 &&
+    Math.abs(token.position.y - cell.userData.tokenY) < 0.12
   );
 }
 
@@ -411,7 +510,7 @@ function setTokenSelected(token, isSelected) {
 }
 
 // создание фишки
-function createToken(x, z) {
+function createToken(x, y, z) {
   const group = new THREE.Group();
   group.userData.isToken = true;
 
@@ -433,26 +532,32 @@ function createToken(x, z) {
   head.position.y = 0.8;
 
   group.add(base, body, head);
-group.position.set(x, 0.51, z);
+  group.position.set(x, y, z);
 
-enableLayerRecursive(group, LAYER_TOKEN);
+  enableLayerRecursive(group, LAYER_TOKEN);
 
-scene.add(group);
-tokens.push(group);
+  scene.add(group);
+  tokens.push(group);
 
-group.updateMatrixWorld(true);
+  group.updateMatrixWorld(true);
 }
 
 // =====================
 // ДОБАВЛЕНИЕ ФИШКИ
 // =====================
 document.getElementById("addToken").onclick = () => {
-  const freeCells = gridCells.filter(cell => !isCellOccupied(cell));
+  if (gridCells.length === 0) return;
 
+  const freeCells = gridCells.filter(cell => !isCellOccupied(cell));
   if (freeCells.length === 0) return;
 
   const cell = freeCells[Math.floor(Math.random() * freeCells.length)];
-  createToken(cell.position.x, cell.position.z);
+
+  createToken(
+    cell.parent.position.x,
+    cell.userData.tokenY,
+    cell.parent.position.z
+  );
 };
 
 // =====================
@@ -476,8 +581,9 @@ renderer.domElement.addEventListener("pointermove", (e) => {
 
   if (isCellOccupied(cell, selected)) return;
 
-  selected.position.x = cell.position.x;
-  selected.position.z = cell.position.z;
+selected.position.x = cell.parent.position.x;
+selected.position.y = cell.userData.tokenY + 0.18;
+selected.position.z = cell.parent.position.z;
 });
 
 renderer.domElement.addEventListener("pointerdown", (e) => {
@@ -500,7 +606,7 @@ renderer.domElement.addEventListener("pointerdown", (e) => {
       if (token) {
         selected = token;
         setTokenSelected(selected, true);
-        selected.position.y = 0.7; // чуть приподнимаем для наглядности
+        selected.position.y += 0.18; // чуть приподнимаем для наглядности
         controls.enabled = false;
       }
     }
@@ -520,9 +626,9 @@ renderer.domElement.addEventListener("pointerdown", (e) => {
 
   if (isCellOccupied(cell, selected)) return;
 
-  selected.position.x = cell.position.x;
-  selected.position.y = 0.51;
-  selected.position.z = cell.position.z;
+selected.position.x = cell.parent.position.x;
+selected.position.y = cell.userData.tokenY;
+selected.position.z = cell.parent.position.z;
 
   setTokenSelected(selected, false);
   selected = null;
