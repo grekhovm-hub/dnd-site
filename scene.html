@@ -727,30 +727,32 @@ for (let i = 0; i < 45; i++) {
 // СЕТКА
 // =====================
 const gridCells = [];
-const size = 10;
+const gridSizeX = 10;
+const gridSizeZ = 26;
 
-for (let x = 0; x < size; x++) {
-  for (let z = 0; z < size; z++) {
+for (let x = 0; x < gridSizeX; x++) {
+  for (let z = 0; z < gridSizeZ; z++) {
     const cell = new THREE.Mesh(
       new THREE.PlaneGeometry(1, 1),
       new THREE.MeshBasicMaterial({
-  color: 0x00ff88,
-  transparent: true,
-  opacity: 0.07,
-  side: THREE.DoubleSide
-})
+        color: 0x00ff88,
+        transparent: true,
+        opacity: 0.07,
+        side: THREE.DoubleSide
+      })
     );
 
+    const posX = (x - gridSizeX / 2) + 0.5;
+    const posZ = (z - gridSizeZ / 2) + 0.5;
+
     cell.rotation.x = -Math.PI / 2;
-    cell.position.set((x - size / 2) + 0.5, 0.405, (z - size / 2) + 0.5);
+    cell.position.set(posX, 0.405, posZ);
 
-   if (!isInsideWalkableDeck(cell.position.x, cell.position.z)) continue;
+    if (!isInsideWalkableDeck(posX, posZ)) continue;
 
-    if (dx * dx + dz * dz > 1) continue;
-
-cell.layers.enable(LAYER_GRID);
-scene.add(cell);
-gridCells.push(cell);
+    cell.layers.enable(LAYER_GRID);
+    scene.add(cell);
+    gridCells.push(cell);
   }
 }
 
