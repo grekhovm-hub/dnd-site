@@ -294,11 +294,6 @@ controls.enabled = true;
 function animate(){
   requestAnimationFrame(animate);
 
-clouds.forEach(c=>{
-  c.position.z += 0.03;
-  if(c.position.z > 25) c.position.z = -25;
-});
-
   renderer.render(scene,camera);
 }
 animate();
