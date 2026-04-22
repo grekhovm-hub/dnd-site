@@ -58,6 +58,11 @@ document.body.appendChild(renderer.domElement);
 const controls = new THREE.OrbitControls(camera, renderer.domElement);
 controls.target.set(0,0,0);
 controls.update();
+controls.mouseButtons = {
+  LEFT: null,                  // ❌ отключаем ЛКМ
+  MIDDLE: THREE.MOUSE.DOLLY,   // колесо — зум
+  RIGHT: THREE.MOUSE.ROTATE    // ПКМ — вращение
+}; 
 
 // =====================
 // СВЕТ
@@ -170,7 +175,7 @@ function createToken(x,z){
   body.position.y = 0.4;
 
   const head = new THREE.Mesh(
-   new THREE.SphereGeometry(1,16,16),
+   new THREE.SphereGeometry(0.2,16,16)
     new THREE.MeshStandardMaterial({ color:0xffffff })
   );
   head.position.y = 0.8;
@@ -178,7 +183,10 @@ function createToken(x,z){
   group.add(base, body, head);
   const hitbox = new THREE.Mesh(
   new THREE.CylinderGeometry(0.6, 0.6, 2, 8),
-  new THREE.MeshBasicMaterial({ visible: false })
+  new THREE.MeshBasicMaterial({
+  transparent: true,
+  opacity: 0
+})
 );
 
 hitbox.position.y = 0.8;
@@ -207,7 +215,9 @@ document.getElementById("addToken").onclick = () => {
 const raycaster = new THREE.Raycaster();
 const mouse = new THREE.Vector2();
 
-window.addEventListener("mouseup", (e)=>{
+window.addEventListener("mousedown", (e)=>{
+    
+  if (e.button !== 0) return;
 
   mouse.x = (e.clientX/window.innerWidth)*2-1;
   mouse.y = -(e.clientY/window.innerHeight)*2+1;
